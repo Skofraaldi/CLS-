@@ -4,7 +4,7 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
 </head><body style="margin:0"><div id="root"></div>
-<script type="text/babel" data-presets="react" data-plugins="transform-react-jsx">
+<script type="text/babel" data-presets="react">
 /* @jsxRuntime classic */
 /* @jsx React.createElement */
 const { useState, useEffect, useRef } = React;
@@ -53,8 +53,8 @@ const PROD_FLOWS={
     {key:"levering",   label:"Levering",                  icon:"📦",note:""},
   ],
 };
-const PIPELINE_STATUSES=["Emne","Møde aftalt","Møde afholdt","Tilbud sendt","Forhandling","Vundet","Tabt"];
-const PIPE_COLORS={"Emne":{c:MTD,bg:"#F0EDE8"},"Møde aftalt":{c:BLUE,bg:BLUEBG},"Møde afholdt":{c:NAVY,bg:"#E8ECF2"},"Tilbud sendt":{c:PURP,bg:PURPBG},"Forhandling":{c:GOLD,bg:GOLDBG},"Vundet":{c:GREEN,bg:GBGN},"Tabt":{c:RED,bg:REDBG}};
+const PIPELINE_STATUSES=["Emne","Møde aftalt","Møde afholdt","Tilbud sendt","Forhandling","Vundet","Tabt","Løst"];
+const PIPE_COLORS={"Emne":{c:MTD,bg:"#F0EDE8"},"Møde aftalt":{c:BLUE,bg:BLUEBG},"Møde afholdt":{c:NAVY,bg:"#E8ECF2"},"Tilbud sendt":{c:PURP,bg:PURPBG},"Forhandling":{c:GOLD,bg:GOLDBG},"Vundet":{c:GREEN,bg:GBGN},"Tabt":{c:RED,bg:REDBG},"Løst":{c:GREEN,bg:GBGN}};
 const SAG_CATS=["Klage","Sponsorat","Forslag","Andet"];
 const SAG_STATUSES=["Ny","Under behandling","Afsluttet"];
 const SAG_COLORS={"Ny":{c:RED,bg:REDBG},"Under behandling":{c:GOLD,bg:GOLDBG},"Afsluttet":{c:GREEN,bg:GBGN}};
@@ -221,7 +221,7 @@ const kr=n=>new Intl.NumberFormat("da-DK",{style:"currency",currency:"DKK",maxim
 const pct=(a,b)=>(((a-b)/b)*100).toFixed(1);
 
 const PCOL={"Studenterhue":{c:NAVY,bg:"#E8ECF2"},"Blåbog":{c:GREEN,bg:GBGN},"Studieturstøj":{c:PURP,bg:PURPBG},"Studenterkørsel":{c:GOLD,bg:GOLDBG}};
-// ─── ATOMS ───────────────────────────────────────────────────────────────────
+//  ATOMS 
 const Ini=({t,s=34,bg=NAVY})=>(<div style={{width:s,height:s,borderRadius:"50%",background:bg,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:s*.33,fontWeight:700,flexShrink:0}}>{t}</div>);
 const Tag=({children,c=GOLD,bg=GOLDBG,small=false})=>(<span style={{display:"inline-block",padding:small?"1px 7px":"2px 9px",borderRadius:3,fontSize:small?10:11,fontWeight:700,letterSpacing:.5,textTransform:"uppercase",color:c,background:bg,whiteSpace:"nowrap"}}>{children}</span>);
 const Divider=()=><div style={{height:1,background:BRD}}/>;
@@ -237,6 +237,12 @@ function FInput({label,value,onChange,placeholder,required,type}){return(<div st
 function FSelect({label,value,onChange,options}){return(<div style={{marginBottom:12}}>{label&&<div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>{label}</div>}<select value={value} onChange={function(e){onChange(e.target.value);}} style={{width:"100%",padding:"9px 12px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,outline:"none",background:SFC,boxSizing:"border-box"}}>{options.map(function(o){return <option key={o.value||o} value={o.value||o}>{o.label||o}</option>;})}</select></div>);}
 function FTextarea({label,value,onChange,placeholder,rows}){return(<div style={{marginBottom:12}}>{label&&<div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>{label}</div>}<textarea value={value} onChange={function(e){onChange(e.target.value);}} rows={rows||3} placeholder={placeholder} style={{width:"100%",padding:"9px 12px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,outline:"none",resize:"vertical",boxSizing:"border-box",lineHeight:1.65}}/></div>);}
 
+const INIT_KONKURRENTER=[
+  {id:"Young United",navn:"Young United",website:"youngunited.dk",kontakt:"",noter:"Primær konkurrent på studenterhuer i Jylland",styrker:"Lavere pris, god leveringstid",svagheder:"Dårligere kvalitet, ingen personlig service",priser:"Fra 1.895 kr.",produkter:["Studenterhue","Studieturstøj"]},
+  {id:"Studentlife",navn:"Studentlife",website:"studentlife.dk",kontakt:"",noter:"",styrker:"Online bestilling, hurtig levering",svagheder:"Ingen lokalkendskab",priser:"",produkter:["Studenterhue","Blåbog"]},
+  {id:"Smilo",navn:"Smilo",website:"smilo.dk",kontakt:"",noter:"",styrker:"Stærk i Sjælland",svagheder:"Dyrere",priser:"",produkter:["Studenterhue"]},
+  {id:"Danske studenterhuer",navn:"Danske studenterhuer",website:"",kontakt:"",noter:"",styrker:"Gammelt brand, god genkendelse",svagheder:"Gammeldags",priser:"",produkter:["Studenterhue"]}
+];
 function SaelgerFilter({value,onChange,label,customFilters,setCustomFilters,schools,schoolId,canEdit}){
   var saelgere=ALL_STAFF.filter(function(s){return s.role==="saelger"||s.role==="internsalg";});
   var sa=useState(false);var showAdd=sa[0];var setShowAdd=sa[1];
@@ -330,7 +336,7 @@ function SaelgerFilter({value,onChange,label,customFilters,setCustomFilters,scho
     </div>
   );
 }
-// ─── ELEV MODAL — kun navn + betalt ──────────────────────────────────────────
+//  ELEV MODAL  kun navn + betalt 
 function ElevStatusModal({school,cohort,cls,onClose,elever,setElever,userRole}){
   var clsElever=elever[cls.id]||[];
   var canEdit=["admin","internsalg","saelger"].includes(userRole);
@@ -392,7 +398,7 @@ function ElevStatusModal({school,cohort,cls,onClose,elever,setElever,userRole}){
   );
 }
 
-// ─── REPR DETALJE MODAL ───────────────────────────────────────────────────────
+//  REPR DETALJE MODAL 
 function ReprDetaljeModal({repr,slot,school,cohort,cls,onRemove,onClose,canEdit}){
   return(
     <Modal onClose={onClose}>
@@ -429,7 +435,7 @@ function ReprDetaljeModal({repr,slot,school,cohort,cls,onRemove,onClose,canEdit}
   );
 }
 
-// ─── INTERN OPGAVE MODAL ──────────────────────────────────────────────────────
+//  INTERN OPGAVE MODAL 
 function OpgaveModal({schools,opgave,onSave,onClose}){
   var st=useState(opgave?opgave.title:"");var title=st[0];var setTitle=st[1];
   var sb=useState(opgave?opgave.body:"");var body=sb[0];var setBody=sb[1];
@@ -465,7 +471,7 @@ function OpgaveModal({schools,opgave,onSave,onClose}){
   );
 }
 
-// ─── NY SKOLE MODAL ───────────────────────────────────────────────────────────
+//  NY SKOLE MODAL 
 function NySkoleModal({onSave,onClose}){
   var sn=useState("");var name=sn[0];var setName=sn[1];
   var sc=useState("");var city=sc[0];var setCity=sc[1];
@@ -506,7 +512,7 @@ function NySkoleModal({onSave,onClose}){
   );
 }
 
-// ─── NY KLASSE MODAL ─────────────────────────────────────────────────────────
+//  NY KLASSE MODAL 
 function NyKlasseModal({school,cohort,onSave,onClose}){
   var sn=useState("");var name=sn[0];var setName=sn[1];
   var ss=useState("0");var students=ss[0];var setStudents=ss[1];
@@ -546,7 +552,7 @@ function NyKlasseModal({school,cohort,onSave,onClose}){
   );
 }
 
-// ─── PRODUKTIONSFLOW MODAL ────────────────────────────────────────────────────
+//  PRODUKTIONSFLOW MODAL 
 function ProduktionModal({school,cohort,cls,onClose,prodStatus,setProdStatus,userRole}){
   var sp=useState(cls.products[0]||"Studenterhue");var selProd=sp[0];var setSelProd=sp[1];
   var status=prodStatus[cls.id]||{};
@@ -606,7 +612,7 @@ function ProduktionModal({school,cohort,cls,onClose,prodStatus,setProdStatus,use
   );
 }
 
-// ─── PIPELINE MODAL ───────────────────────────────────────────────────────────
+//  PIPELINE MODAL 
 function PipelineModal({item,onSave,onClose}){
   var sn=useState(item?item.name:"");var name=sn[0];var setName=sn[1];
   var sc=useState(item?item.city:"");var city=sc[0];var setCity=sc[1];
@@ -647,7 +653,7 @@ function PipelineModal({item,onSave,onClose}){
   );
 }
 
-// ─── SKABELON EDITOR ─────────────────────────────────────────────────────────
+//  SKABELON EDITOR 
 function SkabelonModal({item,onSave,onClose}){
   var sn=useState(item?item.name:"");var name=sn[0];var setName=sn[1];
   var st=useState(item?item.type:"opmaling");var type=st[0];var setType=st[1];
@@ -824,11 +830,11 @@ function NyAargangModal({school,onSave,onClose}){
   );
 }
 
-// ─── NAV ──────────────────────────────────────────────────────────────────────
+//  NAV 
 var PAGES={
-  admin:     ["dashboard","skoler","kommunikation","statistik","indstillinger"],
-  saelger:   ["dashboard","skoler","kommunikation","statistik"],
-  internsalg:["dashboard","skoler","kommunikation","statistik"],
+  admin:     ["dashboard","skoler","kommunikation","statistik","indstillinger","guides"],
+  saelger:   ["dashboard","skoler","kommunikation","statistik","guides"],
+  internsalg:["dashboard","skoler","kommunikation","statistik","guides"],
   repr:      ["dashboard","minskole","kommunikation","guides"],
 };
 var PLBL={dashboard:"Dashboard",skoler:"Skoler",traditioner:"Traditioner",kommunikation:"Kommunikation",statistik:"Statistik",indstillinger:"Indstillinger",guides:"Guides",minskole:"Min skole"};
@@ -962,7 +968,7 @@ function NySagModal({schools,userRole,userName,userIni,onSave,onClose,reprSchool
   );
 }
 
-// ─── DASHBOARD ───────────────────────────────────────────────────────────────
+//  DASHBOARD 
 function Dashboard({user,schools,events,opgaver}){
   var repr=user.role==="repr";
   var myEvents=user.role==="repr"?events.filter(function(e){return e.schoolId===user.schoolId;}).slice(0,3):events.slice(0,3);
@@ -1040,7 +1046,7 @@ function Dashboard({user,schools,events,opgaver}){
   );
 }
 
-// ─── MIN SKOLE (repr) ────────────────────────────────────────────────────────
+//  MIN SKOLE (repr) 
 function MinSkole({user,schools,events,elever,setElever,prodStatus,setProdStatus}){
   var school=schools.find(function(s){return s.id===user.schoolId;});
   var cohort=school&&school.cohorts.find(function(c){return c.id===user.cohortId;});
@@ -1110,7 +1116,7 @@ function MinSkole({user,schools,events,elever,setElever,prodStatus,setProdStatus
   );
 }
 
-// ─── REPR BOX ─────────────────────────────────────────────────────────────────
+//  REPR BOX 
 function ReprBox({repr,slot,schoolName,year,className,canEdit,onInvite,onClickRepr}){
   if(!repr)return(
     <div onClick={function(){if(canEdit)onInvite({slot:slot,schoolName:schoolName,year:year,className:className});}}
@@ -1134,8 +1140,8 @@ function ReprBox({repr,slot,schoolName,year,className,canEdit,onInvite,onClickRe
   );
 }
 
-// ─── SKOLE INFO MODAL ────────────────────────────────────────────────────────
-function SkoleInfoModal({school,onSave,onClose,canEdit}){
+//  SKOLE INFO MODAL 
+function SkoleInfoModal({school,onSave,onClose,canEdit,customFilters,setCustomFilters}){
   var sps=useState(school.procesStatus||"Invited");var procesStatus=sps[0];var setProcStatus=sps[1];
   var sc=useState(school.contacts||[]);var contacts=sc[0];var setContacts=sc[1];
   var sd=useState(school.delivery||{address:"",notes:""});var delivery=sd[0];var setDelivery=sd[1];
@@ -1254,13 +1260,17 @@ function SkoleInfoModal({school,onSave,onClose,canEdit}){
 
 
 
-// ─── COHORT DETAIL MODAL ─────────────────────────────────────────────────────
-function CohortDetailModal({school,cohort,canEdit,onSave,onClose,inline}){
+//  COHORT DETAIL MODAL 
+function CohortDetailModal({school,cohort,canEdit,onSave,onClose,inline,customKonkurrenter,modeskabeloner,konkurrentProfiler,modeProfiler}){
   var cd=cohort.contract||{type:"Tilbud sendt",approvedBy:"",status:"Tilbud sendt",gdprSigned:false,gdprDate:"",contractFile:""};
   var sc=useState(cd);var contract=sc[0];var setContract=sc[1];
   var sk=useState(cohort.konkurrenter||[]);var konk=sk[0];var setKonk=sk[1];
   var st=useState(cohort.trad||{hue:{aktiv:false,opmaalingTid:"",betalingsFrist:"",leveringsMaaned:"",ekstraNotes:""},stoej:{aktiv:false,afrejse:"",provetojSendt:false,provetojSendtTil:"",provetojSendtDato:"",proevetojNotes:"",ekstraNotes:""},blaabog:{aktiv:false,korrekturAnsvar:"Elever",typiskOplage:0,deadline:"",ekstraNotes:""},koersel:{aktiv:false,typiskAntal:0,ruteNotes:"",tidspunkt:"",ekstraNotes:""}});var trad=st[0];var setTrad=st[1];
   var stb=useState("kontrakt");var tab=stb[0];var setTab=stb[1];
+  var smo=useState(cohort.moeder||[]);var moeder=smo[0];var setMoeder=smo[1];
+  var smv=useState({dato:"",tidFra:"",tidTil:"",type:"",noter:""});var nytModeVal=smv[0];var setNytModeVal=smv[1];
+  var smshow=useState(false);var visNytMode=smshow[0];var setVisNytMode=smshow[1];
+  var smid=useRef(Date.now()+200);
   var nid=useRef(Date.now());
   var iS={width:"100%",padding:"9px 12px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,outline:"none",boxSizing:"border-box"};
   var PROD_COMP=["Studenterhue","Blåbog","Studieturstøj","Studenterkørsel","Alt"];
@@ -1271,7 +1281,7 @@ function CohortDetailModal({school,cohort,canEdit,onSave,onClose,inline}){
   function addKonk(){setKonk(function(p){return p.concat([{id:nid.current++,navn:"",produkt:"Studenterhue",note:""}]);});}
   function upK(id,f,v){setKonk(function(p){return p.map(function(k){return k.id===id?Object.assign({},k,(function(){var _o={};_o[f]=v;return _o;})()):k;});});}
   function delK(id){setKonk(function(p){return p.filter(function(k){return k.id!==id;});});}
-  function save(){onSave({contract:contract,konkurrenter:konk,trad:trad});onClose();}
+  function save(){onSave({contract:contract,konkurrenter:konk,trad:trad,moeder:moeder});onClose();}
 
   // Get repr names for contract approvedBy dropdown
   var reprOptions=[{value:"",label:"— Ikke valgt"}];
@@ -1284,7 +1294,7 @@ function CohortDetailModal({school,cohort,canEdit,onSave,onClose,inline}){
   var CONTRACT_STATUS=["Tilbud sendt","Tilbud godkendt"];
   var cStatus=contract.status||"Tilbud sendt";
   var cCol=cStatus==="Tilbud godkendt"?{c:GREEN,bg:GBGN}:{c:GOLD,bg:GOLDBG};
-  var TABS=[{key:"kontrakt",label:"📝 Kontrakt"},{key:"konkurrenter",label:"⚔️ Konkurrenter"},{key:"traditioner",label:"★ Traditioner"}];
+  var TABS=[{key:"kontrakt",label:"📝 Kontrakt"},{key:"konkurrenter",label:"⚔️ Konkurrenter"},{key:"moeder",label:"📅 Møder"},{key:"traditioner",label:"★ Traditioner"}];
 
   var inlineStyle={background:SFC,borderRadius:12,border:"1px solid "+BRD,overflow:"hidden"};
   var Wrap=inline?function(p){return <div style={inlineStyle}>{p.children}</div>;}:function(p){return <Modal onClose={onClose} wide>{p.children}</Modal>;};
@@ -1353,7 +1363,7 @@ function CohortDetailModal({school,cohort,canEdit,onSave,onClose,inline}){
               {canEdit&&<button onClick={function(){delK(k.id);}} style={{position:"absolute",top:8,right:8,background:"none",border:"none",color:MTD,cursor:"pointer",fontSize:16}}>×</button>}
               {canEdit?<div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                  <FInput label="Konkurrent" value={k.navn} onChange={function(v){upK(k.id,"navn",v);}} placeholder="fx Hector"/>
+                  <div style={{marginBottom:0}}><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>Konkurrent</div><select value={k.navn} onChange={function(e){upK(k.id,"navn",e.target.value);}} style={{width:"100%",padding:"9px 12px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,background:SFC}}><option value="">— Vælg</option>{(customKonkurrenter||[]).map(function(kn){return <option key={kn} value={kn}>{kn}</option>;})}</select></div>
                   <FSelect label="Produkt" value={k.produkt} onChange={function(v){upK(k.id,"produkt",v);}} options={PROD_COMP}/>
                 </div>
                 <FTextarea label="Note" value={k.note} onChange={function(v){upK(k.id,"note",v);}} rows={2} placeholder="Hvad ved vi?"/>
@@ -1364,6 +1374,38 @@ function CohortDetailModal({school,cohort,canEdit,onSave,onClose,inline}){
             </div>
           );})}
           {canEdit&&<button onClick={addKonk} style={{width:"100%",padding:"9px",borderRadius:6,border:"1.5px dashed "+BRD,background:"transparent",color:MTD,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>+ Tilføj konkurrent</button>}
+        </div>}
+
+
+        {/* MDER */}
+        {tab==="moeder"&&<div>
+          <div style={{fontSize:12,color:MTD,marginBottom:14}}>Log møder afholdt med skolen for denne årgang. Sælger kan tilføje noter og tidspunkter.</div>
+          {moeder.length===0&&!visNytMode&&<div style={{padding:"20px",textAlign:"center",color:MTD,fontSize:13,background:"#F8F6F2",borderRadius:8}}>Ingen møder registreret endnu</div>}
+          {moeder.map(function(m){return(
+            <div key={m.id} style={{background:"#F8F6F2",borderRadius:8,padding:"12px 14px",marginBottom:10,position:"relative"}}>
+              {canEdit&&<button onClick={function(){setMoeder(function(p){return p.filter(function(x){return x.id!==m.id;});});}} style={{position:"absolute",top:8,right:8,background:"transparent",border:"none",color:MTD,fontSize:16,cursor:"pointer",lineHeight:1}}>×</button>}
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
+                {m.type&&<span style={{fontSize:12,fontWeight:700,color:NAVY,background:"#E8ECF2",borderRadius:12,padding:"2px 10px"}}>{m.type}</span>}
+                <span style={{fontSize:13,fontWeight:700,color:TXT}}>{m.dato||"Ingen dato"}</span>
+                {(m.tidFra||m.tidTil)&&<span style={{fontSize:12,color:MTD}}>{m.tidFra}{m.tidTil?" – "+m.tidTil:""}</span>}
+              </div>
+              {m.noter&&<div style={{fontSize:13,color:MTD}}>{m.noter}</div>}
+            </div>
+          );})}
+          {visNytMode&&canEdit&&<div style={{background:"#F8F6F2",borderRadius:8,padding:"14px",marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+              <div><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>Dato</div><input type="date" value={nytModeVal.dato} onChange={function(e){setNytModeVal(function(p){return Object.assign({},p,{dato:e.target.value});});}} style={{width:"100%",padding:"9px 10px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,boxSizing:"border-box"}}/></div>
+              <div><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>Start</div><input type="time" value={nytModeVal.tidFra} onChange={function(e){setNytModeVal(function(p){return Object.assign({},p,{tidFra:e.target.value});});}} style={{width:"100%",padding:"9px 10px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT}}/></div>
+              <div><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>Slut</div><input type="time" value={nytModeVal.tidTil} onChange={function(e){setNytModeVal(function(p){return Object.assign({},p,{tidTil:e.target.value});});}} style={{width:"100%",padding:"9px 10px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT}}/></div>
+            </div>
+            <div style={{marginBottom:8}}><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>Mødetype</div><select value={nytModeVal.type} onChange={function(e){setNytModeVal(function(p){return Object.assign({},p,{type:e.target.value});});}} style={{width:"100%",padding:"9px 12px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,background:SFC}}><option value="">— Vælg type</option>{(modeskabeloner||[]).map(function(t){return <option key={t} value={t}>{t}</option>;})}</select></div>
+            <div style={{marginBottom:8}}><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>Noter</div><textarea value={nytModeVal.noter} onChange={function(e){setNytModeVal(function(p){return Object.assign({},p,{noter:e.target.value});});}} rows={3} placeholder="Hvad blev aftalt?" style={{width:"100%",padding:"9px 12px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,resize:"vertical",boxSizing:"border-box"}}/></div>
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+              <button onClick={function(){setVisNytMode(false);setNytModeVal({dato:"",tidFra:"",tidTil:"",type:"",noter:""});}} style={{padding:"7px 14px",borderRadius:5,border:"1px solid "+BRD,background:"transparent",color:MTD,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Annuller</button>
+              <button onClick={function(){setMoeder(function(p){return p.concat([Object.assign({id:smid.current++},nytModeVal)]);});setVisNytMode(false);setNytModeVal({dato:"",tidFra:"",tidTil:"",type:"",noter:""});}} style={{padding:"7px 14px",borderRadius:5,border:"none",background:NAVY,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Gem møde</button>
+            </div>
+          </div>}
+          {canEdit&&!visNytMode&&<button onClick={function(){setVisNytMode(true);}} style={{width:"100%",padding:"9px",borderRadius:6,border:"1.5px dashed "+BRD,background:"transparent",color:MTD,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>+ Nyt møde</button>}
         </div>}
 
         {/* TRADITIONER */}
@@ -1381,7 +1423,9 @@ function CohortDetailModal({school,cohort,canEdit,onSave,onClose,inline}){
                 </div>
                 {t.aktiv&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                   {prod.key==="hue"&&<>
-                    <FInput label="Opmålingstidspunkt" value={t.opmaalingTid||""} onChange={function(v){upT("hue","opmaalingTid",v);}} placeholder="fx Marts"/>
+                    <div style={{gridColumn:"1/-1"}}><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>Opmålingsdato</div><input type="date" value={t.opmaalingDato||""} disabled={!canEdit} onChange={function(e){upT("hue","opmaalingDato",e.target.value);}} style={{width:"100%",padding:"9px 12px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,boxSizing:"border-box"}}/></div>
+                    <div><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>Starttidspunkt</div><input type="time" value={t.opmaalingFra||""} disabled={!canEdit} onChange={function(e){upT("hue","opmaalingFra",e.target.value);}} style={{width:"100%",padding:"9px 12px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT}}/></div>
+                    <div><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5}}>Sluttidspunkt</div><input type="time" value={t.opmaalingTil||""} disabled={!canEdit} onChange={function(e){upT("hue","opmaalingTil",e.target.value);}} style={{width:"100%",padding:"9px 12px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT}}/></div>
                     <FInput label="Betalingsfrist" value={t.betalingsFrist||""} onChange={function(v){upT("hue","betalingsFrist",v);}} placeholder="fx 10 dage"/>
                     <FInput label="Leveringsmåned" value={t.leveringsMaaned||""} onChange={function(v){upT("hue","leveringsMaaned",v);}} placeholder="fx Juni"/>
                     <FTextarea label="Noter" value={t.ekstraNotes||""} onChange={function(v){upT("hue","ekstraNotes",v);}} rows={2}/>
@@ -1421,7 +1465,7 @@ function CohortDetailModal({school,cohort,canEdit,onSave,onClose,inline}){
   );
 }
 
-// ─── KLASSE NOTE MODAL ───────────────────────────────────────────────────────
+//  KLASSE NOTE MODAL 
 function ClassNoteModal({school,cohort,cls,classNotes,setClassNotes,onClose}){
   var existing=classNotes[cls.id]||{};
   var sn=useState(existing);var notes=sn[0];var setNotes=sn[1];
@@ -1486,8 +1530,8 @@ function ClassNoteModal({school,cohort,cls,classNotes,setClassNotes,onClose}){
   );
 }
 
-// ─── SKOLER ──────────────────────────────────────────────────────────────────
-function Skoler({user,schools,setSchools,assignments,pipeline,setPipeline,events,setEvents,prodStatus,setProdStatus,elever,setElever,templates,opgaver,setOpgaver,classNotes,setClassNotes,customFilters,setCustomFilters}){
+//  SKOLER 
+function Skoler({user,schools,setSchools,assignments,pipeline,setPipeline,events,setEvents,prodStatus,setProdStatus,elever,setElever,templates,opgaver,setOpgaver,classNotes,setClassNotes,customFilters,setCustomFilters,customKonkurrenter,modeskabeloner,showArkiv,setShowArkiv,konkurrentProfiler,modeProfiler}){
   var st=useState("skoler");var tab=st[0];var setTab=st[1];
   var ss=useState(null);var sel=ss[0];var setSel=ss[1];
   var so=useState(null);var openCoh=so[0];var setOpenCoh=so[1];
@@ -1525,14 +1569,16 @@ function Skoler({user,schools,setSchools,assignments,pipeline,setPipeline,events
   var cohs=[];if(school){cohs=showArch?school.cohorts:school.cohorts.filter(function(c){return c.status==="active";});}
   var calEvents=sel?events.filter(function(e){return e.schoolId===sel||e.schoolId===0;}):events;
   var myPipeline=user.role==="saelger"?pipeline.filter(function(p){return p.responsible===user.id;}):pipeline;
-  var filtPipeline=myPipeline;
-  if(pipeFilter&&pipeFilter.type==="staff"){filtPipeline=myPipeline.filter(function(p){return p.responsible===pipeFilter.id;});}
+  var aktivPipeline=myPipeline.filter(function(p){return showArkiv?p.status==="Løst":p.status!=="Løst";});
+  var filtPipeline=aktivPipeline;
+  if(pipeFilter&&pipeFilter.type==="staff"){filtPipeline=aktivPipeline.filter(function(p){return p.responsible===pipeFilter.id;});}
 
   function updateSchool(sid,patch){setSchools(function(p){return p.map(function(s){return s.id===sid?Object.assign({},s,patch):s;});});}
   function saveNote(){updateSchool(school.id,{note:noteVal});setNoteEdit(false);showToast("Note gemt");}
   function addCohort(yr,classNames,prods){var allCoIds=[];schools.forEach(function(s){s.cohorts.forEach(function(c){allCoIds.push(c.id);});});var maxId=Math.max.apply(null,allCoIds.concat([400]))+1;var allClIds=[];schools.forEach(function(s){s.cohorts.forEach(function(c){c.classes.forEach(function(c2){allClIds.push(c2.id);});});});var maxClsId=Math.max.apply(null,allClIds.concat([9000]))+1;var newCohort={id:maxId,year:yr,status:"active",classes:classNames.map(function(name,i){return {id:maxClsId+i,name:name,students:0,repr1:null,repr2:null,products:prods,orders:0,rev:0};})};updateSchool(school.id,{cohorts:[newCohort].concat(school.cohorts)});setOpenCoh(maxId);showToast("Nyårgang oprettet");}
   function addKlasseToCohort(cohortId,classData){updateSchool(school.id,{cohorts:school.cohorts.map(function(c){return c.id===cohortId?Object.assign({},c,{classes:c.classes.concat([classData])}):c;})});showToast("Klasse tilføjet");}
   function addSchool(data){setSchools(function(p){return p.concat([data]);});showToast("Skole oprettet");}
+  function removeProduct(schoolId,cohortId,classId,prod){setSchools(function(p){return p.map(function(s){if(s.id!==schoolId)return s;return Object.assign({},s,{cohorts:s.cohorts.map(function(c){if(c.id!==cohortId)return c;return Object.assign({},c,{classes:c.classes.map(function(cl){if(cl.id!==classId)return cl;return Object.assign({},cl,{products:(cl.products||[]).filter(function(px){return px!==prod;})});})});})});});});showToast("Produkt fjernet");}
   function removeRepr(schoolId,cohortId,classId,slot){setSchools(function(p){return p.map(function(s){if(s.id!==schoolId)return s;return Object.assign({},s,{cohorts:s.cohorts.map(function(c){if(c.id!==cohortId)return c;return Object.assign({},c,{classes:c.classes.map(function(cl){if(cl.id!==classId)return cl;var patch={};patch["repr"+slot]=null;return Object.assign({},cl,patch);})})})});})});showToast("Repræsentant fjernet");}
   function savePipeline(data){if(pipeEdit){setPipeline(function(p){return p.map(function(x){return x.id===pipeEdit.id?Object.assign({},x,data):x;});});showToast("Emne opdateret");}else{setPipeline(function(p){return p.concat([Object.assign({id:Date.now()},data)]);});showToast("Emne oprettet");}setPipeModal(false);setPipeEdit(null);}
   function delPipeline(id){setPipeline(function(p){return p.filter(function(x){return x.id!==id;});});showToast("Emne slettet");}
@@ -1584,7 +1630,7 @@ function Skoler({user,schools,setSchools,assignments,pipeline,setPipeline,events
         {TABS_ITEMS.map(function(t){return <button key={t.key} onClick={function(){setTab(t.key);}} style={{padding:"7px 16px",background:tab===t.key?NAVY:"transparent",color:tab===t.key?"#fff":MTD,border:"none",fontSize:12,fontWeight:tab===t.key?700:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>{t.label}</button>;})}
       </div>
 
-      {/* ── SKOLER TAB ── */}
+      {/*  SKOLER TAB  */}
       {tab==="skoler"&&(
         <div style={{display:"grid",gridTemplateColumns:"280px 1fr",gap:18}}>
           <div>
@@ -1653,7 +1699,7 @@ function Skoler({user,schools,setSchools,assignments,pipeline,setPipeline,events
                   {school.note&&<div style={{padding:"10px 14px",background:"#F8F6F2",borderRadius:6,fontSize:12,color:TXT,lineHeight:1.65,fontStyle:"italic"}}>"{school.note}"</div>}
                 </Card>
 
-                {/* Årgange */}
+                {/* rgange */}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
                     <span style={{fontSize:13,fontWeight:700,color:TXT}}>Årgange</span>
@@ -1692,7 +1738,7 @@ function Skoler({user,schools,setSchools,assignments,pipeline,setPipeline,events
                           })}
                         </div>
                         {(school._cohSubTabs&&school._cohSubTabs[co.id])==="arsopl"?
-                          <CohortDetailModal school={school} cohort={co} canEdit={canEdit} inline onSave={function(upd){setSchools(function(p){return p.map(function(s){if(s.id!==school.id)return s;return Object.assign({},s,{cohorts:s.cohorts.map(function(c){return c.id===co.id?Object.assign({},c,upd):c;})});});});}} onClose={function(){}}/>
+                          <CohortDetailModal school={school} cohort={co} canEdit={canEdit} customKonkurrenter={customKonkurrenter||[]} modeskabeloner={modeskabeloner||[]} konkurrentProfiler={konkurrentProfiler||[]} modeProfiler={modeProfiler||[]} inline onSave={function(upd){setSchools(function(p){return p.map(function(s){if(s.id!==school.id)return s;return Object.assign({},s,{cohorts:s.cohorts.map(function(c){return c.id===co.id?Object.assign({},c,upd):c;})});});});}} onClose={function(){}}/>
                         :(
                         <div>
                         <div style={{overflowX:"auto"}}>
@@ -1748,7 +1794,7 @@ function Skoler({user,schools,setSchools,assignments,pipeline,setPipeline,events
         </div>
       )}
 
-      {/* ── KALENDER TAB ── */}
+      {/*  KALENDER TAB  */}
       {tab==="kalender"&&(
         <div>
           <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:14,flexWrap:"wrap"}}>
@@ -1784,14 +1830,15 @@ function Skoler({user,schools,setSchools,assignments,pipeline,setPipeline,events
         </div>
       )}
 
-      {/* ── PIPELINE TAB ── */}
+      {/*  PIPELINE TAB  */}
       {tab==="pipeline"&&canPipeline&&(
         <div>
           <div style={{marginBottom:12}}>
             <SaelgerFilter value={pipeFilter} onChange={setPipeFilter} label="Ansvarlig" customFilters={customFilters} setCustomFilters={setCustomFilters} schools={schools}/>
           </div>
-          <div style={{fontSize:12,color:MTD,marginBottom:10}}>
-            {user.role==="saelger"?"Viser dine emner":"Alle emner"} · {filtPipeline.length} emner
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+            <div style={{fontSize:12,color:MTD,flex:1}}>{user.role==="saelger"?"Viser dine emner":"Alle emner"} · {filtPipeline.length} {showArkiv?"arkiverede":"aktive"} emner</div>
+            {canEdit&&<button onClick={function(){setShowArkiv(!showArkiv);}} style={{padding:"4px 12px",borderRadius:20,border:"1px solid "+BRD,background:showArkiv?NAVY:"transparent",color:showArkiv?"#fff":MTD,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{showArkiv?"← Aktive":"🗃 Arkiv"}</button>}
           </div>
           <Card noPad>
             {filtPipeline.length===0&&<div style={{padding:"28px",textAlign:"center",color:MTD,fontSize:13}}>Ingen emner{pipeFilter?" for denne sælger":""}</div>}
@@ -1818,6 +1865,7 @@ function Skoler({user,schools,setSchools,assignments,pipeline,setPipeline,events
                     </div>}
                   </div>
                   {canEdit&&<div style={{display:"flex",gap:6,flexShrink:0}}>
+                    {!showArkiv&&<button onClick={function(){setPipeline(function(p){return p.map(function(x){return x.id===item.id?Object.assign({},x,{status:"Løst"}):x;});});}} title="Marker som løst" style={{padding:"5px 10px",borderRadius:5,border:"1px solid "+BRD,background:GBGN,color:GREEN,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>✓ Løst</button>}
                     <button onClick={function(){setPipeEdit(item);setPipeModal(true);}} style={{padding:"5px 10px",borderRadius:5,border:"1px solid "+BRD,background:"transparent",color:MTD,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Rediger</button>
                     <button onClick={function(){delPipeline(item.id);}} style={{padding:"5px 10px",borderRadius:5,border:"1px solid "+BRD,background:"transparent",color:RED,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Slet</button>
                   </div>}
@@ -1831,8 +1879,8 @@ function Skoler({user,schools,setSchools,assignments,pipeline,setPipeline,events
   );
 }
 
-// ─── TRADITIONER ─────────────────────────────────────────────────────────────
-function Traditioner({user,schools,setSchools,assignments,customFilters,setCustomFilters}){
+//  TRADITIONER 
+function Traditioner({user,schools,setSchools,assignments,customFilters,setCustomFilters,customKonkurrenter,modeskabeloner}){
   var canEdit=["admin","saelger","internsalg"].includes(user.role);
   var stf=useState(null);var tradFilter=stf[0];var setTradFilter=stf[1];
   var sel=useState(null);var selSchool=sel[0];var setSelSchool=sel[1];
@@ -1895,14 +1943,7 @@ function Traditioner({user,schools,setSchools,assignments,customFilters,setCusto
             <div>Vælg en årgang for at se og redigere traditioner, kontrakt og konkurrenter</div>
           </div>}
           {selSchool&&selCohort&&school&&cohort&&(
-            <CohortDetailModal
-              school={school}
-              cohort={cohort}
-              canEdit={canEdit}
-              onSave={function(upd){saveCohortTrad(school.id,cohort.id,upd);}}
-              onClose={function(){}}
-              inline={true}
-            />
+            <CohortDetailModal school={school} cohort={cohort} canEdit={canEdit} customKonkurrenter={customKonkurrenter||[]} modeskabeloner={modeskabeloner||[]} onSave={function(upd){saveCohortTrad(school.id,cohort.id,upd);}} onClose={function(){}} inline={true}/>
           )}
         </div>
       </div>
@@ -1910,7 +1951,7 @@ function Traditioner({user,schools,setSchools,assignments,customFilters,setCusto
   );
 }
 
-// ─── SAG CARD (extracted to allow hooks per sag) ─────────────────────────────
+//  SAG CARD (extracted to allow hooks per sag) 
 function SagCard({sag,schools,isInternal,onUpdateStatus,onUpdateAssign,onUpdateNote,onAddReply}){
   var so=useState(false);var openSag=so[0];var setOpenSag=so[1];
   var sr=useState("");var replyT=sr[0];var setReplyT=sr[1];
@@ -1959,7 +2000,7 @@ function SagCard({sag,schools,isInternal,onUpdateStatus,onUpdateAssign,onUpdateN
   );
 }
 
-// ─── KOMMUNIKATION ──────────────────────────────────────────────────────────
+//  KOMMUNIKATION 
 function Kommunikation({user,schools,assignments,customFilters,setCustomFilters,opgaver,setOpgaver,sager,setSager}){
   var st=useState("forum");var tab=st[0];var setTab=st[1];
   var skf=useState(null);var skolerFilter=skf[0];var setSkolerFilter=skf[1];
@@ -1970,6 +2011,10 @@ function Kommunikation({user,schools,assignments,customFilters,setCustomFilters,
   var snm=useState("");var newMsg=snm[0];var setNewMsg=snm[1];
   var sny=useState(false);var nySag=sny[0];var setNySag=sny[1];
   var sno=useState(false);var nyOpgave=sno[0];var setNyOpgave=sno[1];
+  var snk=useState("");var nyKonkNavn=snk[0];var setNyKonkNavn=snk[1];
+  var sok=useState(null);var openKonk=sok[0];var setOpenKonk=sok[1];
+  var som=useState(null);var openMode=som[0];var setOpenMode=som[1];
+  var snmt=useState("");var nyModetypeNavn=snmt[0];var setNyModetypeNavn=snmt[1];
   var ssf=useState(null);var sagFilter=ssf[0];var setSagFilter=ssf[1];
   var sop=useState(null);var selOpgave=sop[0];var setSelOpgave=sop[1];
 
@@ -2128,7 +2173,7 @@ function Kommunikation({user,schools,assignments,customFilters,setCustomFilters,
   );
 }
 
-function Statistik({user,schools,setSchools}){
+function Statistik({user,schools,setSchools,customFilters,setCustomFilters}){
   var canEdit=["admin","internsalg"].includes(user.role);
   var allCls=[];schools.forEach(function(s){s.cohorts.filter(function(c){return c.status==="active";}).forEach(function(c){c.classes.forEach(function(cl){allCls.push(Object.assign({schoolId:s.id,schoolName:s.name,cohortYear:cl.year||2026},cl));});});});
   var totalRev=allCls.reduce(function(a,c){return a+c.rev;},0);
@@ -2144,22 +2189,7 @@ function Statistik({user,schools,setSchools}){
     setEditCell({schoolId:schoolId,cohortId:cohortId,classId:classId,field:field});
     setEditVal(String(cur));
   }
-  function saveEdit(){
-    if(!editCell)return;
-    var numVal=parseInt(editVal)||0;
-    setSchools(function(p){return p.map(function(s){
-      if(s.id!==editCell.schoolId)return s;
-      return Object.assign({},s,{cohorts:s.cohorts.map(function(co){
-        if(co.id!==editCell.cohortId)return co;
-        return Object.assign({},co,{classes:co.classes.map(function(cl){
-          if(cl.id!==editCell.classId)return cl;
-          var patch={};patch[editCell.field]=editCell.field==="rev"?numVal:(parseInt(editVal)||0);
-          return Object.assign({},cl,patch);
-        })});
-      })});
-    });});
-    setEditCell(null);showToast("Opdateret");
-  }
+  function saveEdit(){if(!editCell)return;var numVal=parseInt(editVal)||0;setSchools(function(p){return p.map(function(s){if(s.id!==editCell.schoolId)return s;return Object.assign({},s,{cohorts:s.cohorts.map(function(co){if(co.id!==editCell.cohortId)return co;return Object.assign({},co,{classes:co.classes.map(function(cl){if(cl.id!==editCell.classId)return cl;var patch={};patch[editCell.field]=numVal;return Object.assign({},cl,patch);})});})});});});setEditCell(null);showToast("Opdateret");}
 
   var filtCls=selSchool?allCls.filter(function(c){return c.schoolId===selSchool;}):allCls;
   var maxRev=Math.max.apply(null,filtCls.map(function(c){return c.rev;}).concat([1]));
@@ -2193,7 +2223,7 @@ function Statistik({user,schools,setSchools}){
         </Card>
       </div>
 
-      {/* Klasse-tabel — redigerbar */}
+      {/* Klasse-tabel  redigerbar */}
       <Card noPad>
         <div style={{padding:"14px 20px",borderBottom:"1px solid "+BRD,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontSize:15,fontWeight:700,color:TXT,fontFamily:"'Playfair Display',serif"}}>
@@ -2262,23 +2292,88 @@ function Statistik({user,schools,setSchools}){
   );
 }
 
-function Guides(){
-  var guides=[{icon:"🎓",title:"Bestilling af studenterhue",body:"Log ind og gå til Min skole. Under Produktion kan du se status på din hues fremstilling. Har du spørgsmål, kontakt din CLS-sælger via Chat."},{icon:"💳",title:"Sådan betaler du",body:"Gå til Betalingsstatus under Min skole og tryk på 'Betal nu'. Har du problemer med betalingen, kontakt os via Kommunikation."},{icon:"👗",title:"Studieturstøj",body:"Din klasse bestiller via den link sælger har opsat. Tegning og print vælges, og levering sker typisk 3-4 uger efter deadline."},{icon:"📗",title:"Blåbogen",body:"Alle elever bidrager via Blåbog-portalen. Deadline er som aftalt med skolen. Korrektur sendes til repr. inden tryk."},{icon:"❓",title:"Kontakt os",body:"Brug Chat-funktionen for hurtige spørgsmål, eller opret en Henvendelse under Kommunikation for formelle sager."}];
+function Guides({user}){
+  var canEdit=user&&user.role==="admin";
+  var sg=useState([{id:1,icon:"🎓",title:"Bestilling af studenterhue",body:"Log ind og gaa til Min skole. Under Produktion kan du se status paa din hues fremstilling. Har du spoergsmaal, kontakt din CLS-saelger via Chat."},{id:2,icon:"💳",title:"Saadan betaler du",body:"Gaa til Betalingsstatus under Min skole og tryk paa Betal nu. Har du problemer med betalingen, kontakt os via Kommunikation."},{id:3,icon:"👗",title:"Studieturtoej",body:"Din klasse bestiller via den link saelger har opsat. Tegning og print vaelges, og levering sker typisk 3-4 uger efter deadline."},{id:4,icon:"📗",title:"Blaabogen",body:"Alle elever bidrager via Blaabog-portalen. Deadline er som aftalt med skolen. Korrektur sendes til repr. inden tryk."},{id:5,icon:"❓",title:"Kontakt os",body:"Brug Chat-funktionen for hurtige spoergsmaal, eller opret en Henvendelse under Kommunikation for formelle sager."}]);var guides=sg[0];var setGuides=sg[1];
+  var sei=useState(null);var editId=sei[0];var setEditId=sei[1];
+  var sev=useState({icon:"",title:"",body:""});var editVal=sev[0];var setEditVal=sev[1];
+  var snid=useRef(Date.now());
+  function startEdit(g){setEditId(g.id);setEditVal({icon:g.icon,title:g.title,body:g.body});}
+  function saveEdit(){setGuides(function(p){return p.map(function(g){return g.id===editId?Object.assign({},g,editVal):g;});});setEditId(null);}
+  function addGuide(){var id=snid.current++;setGuides(function(p){return p.concat([{id:id,icon:"📌",title:"Ny guide",body:"Beskriv guiden her..."}]);});setEditId(id);setEditVal({icon:"📌",title:"Ny guide",body:"Beskriv guiden her..."});}
+  function delGuide(id){setGuides(function(p){return p.filter(function(g){return g.id!==id;});});}
+  var iS={width:"100%",padding:"8px 10px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,boxSizing:"border-box"};
   return(
     <div style={{padding:"28px 28px 40px",maxWidth:720,margin:"0 auto"}}>
-      <h1 style={{fontSize:22,fontWeight:700,color:TXT,margin:"0 0 20px",fontFamily:"'Playfair Display',serif"}}>Guides</h1>
-      {guides.map(function(g,i){return <Card key={i} style={{marginBottom:12}}><div style={{display:"flex",gap:14}}><div style={{fontSize:28,flexShrink:0}}>{g.icon}</div><div><div style={{fontSize:15,fontWeight:700,color:TXT,marginBottom:6,fontFamily:"'Playfair Display',serif"}}>{g.title}</div><div style={{fontSize:13,color:MTD,lineHeight:1.65}}>{g.body}</div></div></div></Card>;})}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <h1 style={{fontSize:22,fontWeight:700,color:TXT,margin:0,fontFamily:"'Playfair Display',serif"}}>Guides</h1>
+        {canEdit&&<button onClick={addGuide} style={{padding:"7px 14px",borderRadius:5,border:"none",background:NAVY,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>+ Ny guide</button>}
+      </div>
+      {guides.map(function(g){return(
+        <Card key={g.id} style={{marginBottom:12}}>
+          {(editId===g.id&&canEdit)?(
+            <div>
+              <div style={{display:"flex",gap:8,marginBottom:8}}>
+                <input value={editVal.icon} onChange={function(e){setEditVal(function(p){return Object.assign({},p,{icon:e.target.value});});}} placeholder="Emoji" style={Object.assign({},iS,{width:60})}/>
+                <input value={editVal.title} onChange={function(e){setEditVal(function(p){return Object.assign({},p,{title:e.target.value});});}} placeholder="Titel" style={iS}/>
+              </div>
+              <textarea value={editVal.body} onChange={function(e){setEditVal(function(p){return Object.assign({},p,{body:e.target.value});});}} rows={4} placeholder="Beskrivelse..." style={Object.assign({},iS,{resize:"vertical"})}/>
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:8}}>
+                <button onClick={function(){delGuide(g.id);setEditId(null);}} style={{padding:"6px 12px",borderRadius:5,border:"1px solid "+RED,background:"transparent",color:RED,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Slet</button>
+                <button onClick={function(){setEditId(null);}} style={{padding:"6px 12px",borderRadius:5,border:"1px solid "+BRD,background:"transparent",color:MTD,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Annuller</button>
+                <button onClick={saveEdit} style={{padding:"6px 14px",borderRadius:5,border:"none",background:NAVY,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Gem</button>
+              </div>
+            </div>
+          ):(
+            <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+              <div style={{fontSize:28,lineHeight:1,flexShrink:0}}>{g.icon}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,fontWeight:700,color:TXT,marginBottom:5,fontFamily:"'Playfair Display',serif"}}>{g.title}</div>
+                <div style={{fontSize:13,color:MTD,lineHeight:1.7}}>{g.body}</div>
+              </div>
+              {canEdit&&<button onClick={function(){startEdit(g);}} style={{background:"transparent",border:"none",color:MTD,fontSize:16,cursor:"pointer",padding:"2px 6px",flexShrink:0}}>✏️</button>}
+            </div>
+          )}
+        </Card>
+      );})}
+    </div>
+  );
+}
+//  INDSTILLINGER 
+//  MDE PROFIL VIEW 
+function ModeProfilView({navn,modeProfiler,setModeProfiler,onBack}){
+  var mp=(modeProfiler||[]).find(function(m){return m.id===navn;})||{id:navn,navn:navn,formal:'',forberedelse:'',typiskVarighed:'',hvemDeltager:'',tjekliste:'',noter:''};
+  function upM(f,v){setModeProfiler(function(p){var ex=p.find(function(x){return x.id===navn;});if(ex)return p.map(function(x){return x.id===navn?Object.assign({},x,(function(){var o={};o[f]=v;return o;})()):x;});return p.concat([Object.assign({},mp,(function(){var o={};o[f]=v;return o;})())]);});}
+  var iS={width:'100%',padding:'8px 10px',borderRadius:5,border:'1px solid '+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,boxSizing:'border-box'};
+  var taS=Object.assign({},iS,{resize:'vertical'});
+  return(
+    <div>
+      <button onClick={onBack} style={{fontSize:13,color:NAVY,background:'transparent',border:'none',cursor:'pointer',marginBottom:14,padding:0,fontFamily:'inherit'}}>← Tilbage til oversigt</button>
+      <Card>
+        <div style={{fontSize:18,fontWeight:700,color:TXT,fontFamily:"'Playfair Display',serif",marginBottom:16}}>📅 {mp.navn}</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
+          <div><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:'uppercase',letterSpacing:.7,marginBottom:5}}>Typisk varighed (min)</div><input value={mp.typiskVarighed||''} onChange={function(e){upM('typiskVarighed',e.target.value);}} placeholder="fx 60" style={iS}/></div>
+          <div><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:'uppercase',letterSpacing:.7,marginBottom:5}}>Hvem deltager</div><input value={mp.hvemDeltager||''} onChange={function(e){upM('hvemDeltager',e.target.value);}} placeholder="fx Saelger + repr." style={iS}/></div>
+        </div>
+        <div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:'uppercase',letterSpacing:.7,marginBottom:5}}>Formal</div><textarea value={mp.formal||''} onChange={function(e){upM('formal',e.target.value);}} rows={2} placeholder="Hvad er formalet med dette mode?" style={taS}/></div>
+        <div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:'uppercase',letterSpacing:.7,marginBottom:5}}>Forberedelse</div><textarea value={mp.forberedelse||''} onChange={function(e){upM('forberedelse',e.target.value);}} rows={2} placeholder="Hvad skal forberedes inden modet?" style={taS}/></div>
+        <div style={{marginBottom:10}}><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:'uppercase',letterSpacing:.7,marginBottom:5}}>Tjekliste</div><textarea value={mp.tjekliste||''} onChange={function(e){upM('tjekliste',e.target.value);}} rows={4} placeholder="fx Vis proevehat | Mal elever | Udfyld skema" style={taS}/></div>
+        <div><div style={{fontSize:11,fontWeight:700,color:MTD,textTransform:'uppercase',letterSpacing:.7,marginBottom:5}}>Generelle noter</div><textarea value={mp.noter||''} onChange={function(e){upM('noter',e.target.value);}} rows={2} placeholder="Andre bemaerkninger..." style={taS}/></div>
+      </Card>
     </div>
   );
 }
 
-// ─── INDSTILLINGER ───────────────────────────────────────────────────────────
-function Indstillinger({schools,assignments,setAssignments,templates,setTemplates,opgaver,setOpgaver}){
+function Indstillinger({schools,assignments,setAssignments,templates,setTemplates,opgaver,setOpgaver,customKonkurrenter,setCustomKonkurrenter,modeskabeloner,setModeskabeloner,konkurrentProfiler,setKonkurrentProfiler,modeProfiler,setModeProfiler}){
   var st=useState("tildeling");var tab=st[0];var setTab=st[1];
   var ss=useState(null);var skabelonEdit=ss[0];var setSkabelonEdit=ss[1];
   var sn=useState(false);var nySkabelon=sn[0];var setNySkabelon=sn[1];
   var stoast=useState(null);var toast=stoast[0];var setToast=stoast[1];
   var sno=useState(false);var nyOpgave=sno[0];var setNyOpgave=sno[1];
+  var snk=useState("");var nyKonkNavn=snk[0];var setNyKonkNavn=snk[1];
+  var sok=useState(null);var openKonk=sok[0];var setOpenKonk=sok[1];
+  var som=useState(null);var openMode=som[0];var setOpenMode=som[1];
+  var snmt=useState("");var nyModetypeNavn=snmt[0];var setNyModetypeNavn=snmt[1];
 
   function showToast(m){setToast(m);setTimeout(function(){setToast(null);},2200);}
   function toggleAssign(schoolId,staffId){setAssignments(function(p){var cur=p[schoolId]||[];var next=cur.includes(staffId)?cur.filter(function(id){return id!==staffId;}):[].concat(cur,[staffId]);return Object.assign({},p,(function(){var _o={};_o[schoolId]=next;return _o;})());});}
@@ -2292,7 +2387,7 @@ function Indstillinger({schools,assignments,setAssignments,templates,setTemplate
 
   var saelgere=ALL_STAFF.filter(function(s){return s.role==="saelger"||s.role==="internsalg";});
   var openOpgaver=(opgaver||[]).filter(function(o){return o.status!=="Udført";}).length;
-  var TABS=[{key:"tildeling",label:"Skoletildeling"},{key:"skabeloner",label:"Skabeloner"},{key:"opgaver",label:"Opgaver"+(openOpgaver>0?" ("+openOpgaver+")":"")},{key:"medarbejdere",label:"Medarbejdere"}];
+  var TABS=[{key:"tildeling",label:"Skoletildeling"},{key:"skabeloner",label:"Skabeloner"},{key:"konkurrenter",label:"Konkurrenter"},{key:"moedetyper",label:"Mødetyper"},{key:"opgaver",label:"Opgaver"+(openOpgaver>0?" ("+openOpgaver+")":"")},{key:"medarbejdere",label:"Medarbejdere"}];
 
   return(
     <div style={{padding:"28px 28px 40px",maxWidth:960,margin:"0 auto"}}>
@@ -2395,6 +2490,55 @@ function Indstillinger({schools,assignments,setAssignments,templates,setTemplate
         })}
       </div>}
 
+
+      {tab==="konkurrenter"&&<div>
+        {openKonk&&<KonkurrentProfilView navn={openKonk} konkurrentProfiler={konkurrentProfiler} setKonkurrentProfiler={setKonkurrentProfiler} onBack={function(){setOpenKonk(null);}}/>}
+        {!openKonk&&<div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12,marginBottom:20}}>
+            {(customKonkurrenter||[]).map(function(k){var kp=(konkurrentProfiler||[]).find(function(x){return x.id===k;});return(
+              <div key={k} onClick={function(){setOpenKonk(k);}} style={{background:SFC,border:"1px solid "+BRD,borderRadius:10,padding:"14px 16px",cursor:"pointer"}}>
+                <div style={{fontSize:15,fontWeight:700,color:TXT,marginBottom:4}}>{k}</div>
+                {kp&&kp.website&&<div style={{fontSize:11,color:MTD,marginBottom:6}}>{kp.website}</div>}
+                {kp&&kp.styrker&&<div style={{fontSize:11,color:GREEN,marginBottom:2}}>+ {kp.styrker.substring(0,50)}{kp.styrker.length>50?"...":""}</div>}
+                {kp&&kp.svagheder&&<div style={{fontSize:11,color:MTD}}>- {kp.svagheder.substring(0,50)}{kp.svagheder.length>50?"...":""}</div>}
+                <div style={{fontSize:11,color:NAVY,marginTop:8}}>Klik for profil</div>
+              </div>
+            );})}
+          </div>
+          <Card>
+            <STitle sub="Tilfoej konkurrenter til dropdown i aargange">Tilfoej konkurrent</STitle>
+            <div style={{display:"flex",gap:8}}>
+              <input value={nyKonkNavn} onChange={function(e){setNyKonkNavn(e.target.value);}} placeholder="Navn pa konkurrent..." style={{flex:1,padding:"9px 12px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,outline:"none"}}/>
+              <button onClick={function(){if(!nyKonkNavn.trim())return;var n=nyKonkNavn.trim();setCustomKonkurrenter(function(p){return p.concat([n]);});setNyKonkNavn("");}} style={{padding:"9px 18px",borderRadius:5,border:"none",background:NAVY,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Tilfoej</button>
+            </div>
+          </Card>
+        </div>}
+      </div>}
+
+      {tab==="moedetyper"&&<div>
+        {!openMode&&<div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12,marginBottom:20}}>
+            {(modeskabeloner||[]).map(function(m){var mp=(modeProfiler||[]).find(function(x){return x.id===m;});return(
+              <div key={m} onClick={function(){setOpenMode(m);}} style={{background:SFC,border:"1px solid "+BRD,borderRadius:10,padding:"14px 16px",cursor:"pointer"}}>
+                <div style={{fontSize:15,fontWeight:700,color:TXT,marginBottom:6}}>📅 {m}</div>
+                {mp&&mp.typiskVarighed&&<div style={{fontSize:11,color:MTD,marginBottom:4}}>⏱ {mp.typiskVarighed} min</div>}
+                {mp&&mp.hvemDeltager&&<div style={{fontSize:11,color:MTD,marginBottom:4}}>👥 {mp.hvemDeltager}</div>}
+                {mp&&mp.formal&&<div style={{fontSize:11,color:TXT,marginBottom:2}}>{mp.formal.substring(0,60)}{mp.formal.length>60?"…":""}</div>}
+                <div style={{fontSize:11,color:NAVY,marginTop:8}}>Klik for detaljer →</div>
+              </div>
+            );})}
+          </div>
+          <Card>
+            <STitle sub="Tilføj mødetyper der bruges til at logge møder på årgange">Tilføj mødetype</STitle>
+            <div style={{display:"flex",gap:8}}>
+              <input value={nyModetypeNavn} onChange={function(e){setNyModetypeNavn(e.target.value);}} placeholder="Ny mødetype..." style={{flex:1,padding:"9px 12px",borderRadius:5,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,outline:"none"}}/>
+              <button onClick={function(){if(!nyModetypeNavn.trim())return;var n=nyModetypeNavn.trim();setModeskabeloner(function(p){return p.concat([n]);});setNyModetypeNavn("");}} style={{padding:"9px 18px",borderRadius:5,border:"none",background:NAVY,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Tilføj</button>
+            </div>
+          </Card>
+        </div>}
+        {openMode&&<ModeProfilView navn={openMode} modeProfiler={modeProfiler} setModeProfiler={setModeProfiler} onBack={function(){setOpenMode(null);}}/>}
+      </div>}
+
       {tab==="medarbejdere"&&<div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:14}}>
           {ALL_STAFF.map(function(s){return(
@@ -2423,7 +2567,7 @@ function Indstillinger({schools,assignments,setAssignments,templates,setTemplate
   );
 }
 
-// ─── LOGIN ──────────────────────────────────────────────────────────────────
+//  LOGIN 
 function Login({onLogin}){
   return(
     <div style={{minHeight:"100vh",background:BG,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
@@ -2454,7 +2598,7 @@ function Login({onLogin}){
   );
 }
 
-// ─── APP ──────────────────────────────────────────────────────────────────────
+//  APP 
 function App(){
   var su=useState(null);var user=su[0];var setUser=su[1];
   var sp=useState("dashboard");var page=sp[0];var setPage=sp[1];
@@ -2471,6 +2615,11 @@ function App(){
   var scn=useState({});var classNotes=scn[0];var setClassNotes=scn[1];
   var scdm=useState(null);var cohortDetailModal=scdm[0];var setCohortDetailModal=scdm[1];
   var scf=useState([{id:1,label:"Mine skoler",schoolIds:[1,2]},{id:2,label:"Region Nord",schoolIds:[3]}]);var customFilters=scf[0];var setCustomFilters=scf[1];
+  var sck=useState(["Young United","Studentlife","Smilo","Danske studenterhuer"]);var customKonkurrenter=sck[0];var setCustomKonkurrenter=sck[1];
+  var skp=useState(INIT_KONKURRENTER);var konkurrentProfiler=skp[0];var setKonkurrentProfiler=skp[1];
+  var sms=useState(["Studenterhue-møde","Blåbog-møde","Studieturstøj-møde","Opfølgning","Aftalemøde"]);var modeskabeloner=sms[0];var setModeskabeloner=sms[1];
+  var smtp=useState([{id:"Studenterhue-møde",navn:"Studenterhue-møde",formal:"",forberedelse:"",typiskVarighed:"60",hvemDeltager:"Sælger + klasserepræsentanter",tjekliste:"",noter:""},{id:"Blåbog-møde",navn:"Blåbog-møde",formal:"",forberedelse:"",typiskVarighed:"45",hvemDeltager:"",tjekliste:"",noter:""},{id:"Studieturstøj-møde",navn:"Studieturstøj-møde",formal:"",forberedelse:"",typiskVarighed:"45",hvemDeltager:"",tjekliste:"",noter:""},{id:"Opfølgning",navn:"Opfølgning",formal:"",forberedelse:"",typiskVarighed:"30",hvemDeltager:"",tjekliste:"",noter:""},{id:"Aftalemøde",navn:"Aftalemøde",formal:"",forberedelse:"",typiskVarighed:"60",hvemDeltager:"",tjekliste:"",noter:""}]);var modeProfiler=smtp[0];var setModeProfiler=smtp[1];
+  var spa=useState(false);var showArkiv=spa[0];var setShowArkiv=spa[1];
 
   useEffect(function(){
     function h(e){if((e.metaKey||e.ctrlKey)&&e.key==="k"){e.preventDefault();setShowSearch(true);}}
@@ -2498,13 +2647,13 @@ function App(){
         <Topbar page={page} user={user} onSearch={function(){setShowSearch(true);}} notifCount={notifCount} sagCount={sagCount}/>
         <div style={mainStyle}>
           {page==="dashboard"&&<Dashboard user={user} schools={schools} events={events} opgaver={opgaver}/>}
-          {page==="skoler"&&<Skoler user={user} schools={schools} setSchools={setSchools} assignments={assignments} pipeline={pipeline} setPipeline={setPipeline} events={events} setEvents={setEvents} prodStatus={prodStatus} setProdStatus={setProdStatus} elever={elever} setElever={setElever} templates={templates} opgaver={opgaver} setOpgaver={setOpgaver} classNotes={classNotes} setClassNotes={setClassNotes} customFilters={customFilters} setCustomFilters={setCustomFilters}/>}
-          {page==="traditioner"&&<Traditioner user={user} schools={schools} setSchools={setSchools} assignments={assignments} customFilters={customFilters} setCustomFilters={setCustomFilters}/>}
+          {page==="skoler"&&<Skoler user={user} schools={schools} setSchools={setSchools} assignments={assignments} pipeline={pipeline} setPipeline={setPipeline} events={events} setEvents={setEvents} prodStatus={prodStatus} setProdStatus={setProdStatus} elever={elever} setElever={setElever} templates={templates} opgaver={opgaver} setOpgaver={setOpgaver} classNotes={classNotes} setClassNotes={setClassNotes} customFilters={customFilters} setCustomFilters={setCustomFilters} customKonkurrenter={customKonkurrenter} modeskabeloner={modeskabeloner} showArkiv={showArkiv} setShowArkiv={setShowArkiv} konkurrentProfiler={konkurrentProfiler} modeProfiler={modeProfiler}/>}
+          {page==="traditioner"&&<Traditioner user={user} schools={schools} setSchools={setSchools} assignments={assignments} customFilters={customFilters} setCustomFilters={setCustomFilters} customKonkurrenter={customKonkurrenter} modeskabeloner={modeskabeloner}/>}
           {page==="kommunikation"&&<Kommunikation user={user} schools={schools} assignments={assignments} customFilters={customFilters} setCustomFilters={setCustomFilters} opgaver={opgaver} setOpgaver={setOpgaver} sager={sager} setSager={setSager}/>}
-          {page==="statistik"&&<Statistik user={user} schools={schools} setSchools={setSchools}/>}
-          {page==="indstillinger"&&<Indstillinger schools={schools} assignments={assignments} setAssignments={setAssignments} templates={templates} setTemplates={setTemplates} opgaver={opgaver} setOpgaver={setOpgaver}/>}
+          {page==="statistik"&&<Statistik user={user} schools={schools} setSchools={setSchools} customFilters={customFilters} setCustomFilters={setCustomFilters}/>}
+          {page==="indstillinger"&&<Indstillinger schools={schools} assignments={assignments} setAssignments={setAssignments} templates={templates} setTemplates={setTemplates} opgaver={opgaver} setOpgaver={setOpgaver} customKonkurrenter={customKonkurrenter} setCustomKonkurrenter={setCustomKonkurrenter} modeskabeloner={modeskabeloner} setModeskabeloner={setModeskabeloner} konkurrentProfiler={konkurrentProfiler} setKonkurrentProfiler={setKonkurrentProfiler} modeProfiler={modeProfiler} setModeProfiler={setModeProfiler}/>}
           {page==="minskole"&&<MinSkole user={user} schools={schools} events={events} elever={elever} setElever={setElever} prodStatus={prodStatus} setProdStatus={setProdStatus}/>}
-          {page==="guides"&&<Guides/>}
+          {page==="guides"&&<Guides user={user}/>}
         </div>
       </div>
     </div>
