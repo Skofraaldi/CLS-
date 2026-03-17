@@ -498,57 +498,323 @@ function FeedPost(_a) {
                         React.createElement("button", { onClick: function () { setNewComment(false); setCommentText(""); }, style: { padding: "5px 10px", borderRadius: 4, border: "1px solid " + BRD, background: "transparent", color: MTD, fontSize: 12, cursor: "pointer", fontFamily: "inherit" } }, "Annuller")))) : (React.createElement("button", { onClick: function () { setNewComment(true); }, style: { flex: 1, textAlign: "left", padding: "8px 12px", borderRadius: 8, border: "1px solid " + BRD, background: SFC, color: MTD, fontSize: 12, cursor: "pointer", fontFamily: "inherit" } }, "Skriv en kommentar...")))))));
 }
 // ─── PIPELINE KANBAN ─────────────────────────────────────────────────────────
-function PipelineKanban(_a) {
-    var schools = _a.schools, assignments = _a.assignments, staff = _a.staff, schoolPipeline = _a.schoolPipeline, setSchoolPipeline = _a.setSchoolPipeline, onStageClick = _a.onStageClick, selectedStage = _a.selectedStage;
-    function getStage(schoolId) { var sp = schoolPipeline[schoolId]; return sp ? sp.stage : "ingenKontakt"; }
-    function setStage(schoolId, stage) { setSchoolPipeline(function (p) { var n = Object.assign({}, p); n[schoolId] = { stage: stage, updatedAt: new Date().toISOString().split("T")[0] }; return n; }); }
-    var maxCount = Math.max.apply(null, CLS_PIPE_STAGES.map(function (s) { return schools.filter(function (sc) { return getStage(sc.id) === s.key; }).length; }).concat([1]));
-    return (React.createElement("div", null,
-        React.createElement("div", { style: { display: "flex", borderRadius: 8, overflow: "hidden", marginBottom: 20, height: 56, border: "1px solid " + BRD } }, CLS_PIPE_STAGES.map(function (stage, idx) {
-            var cnt = schools.filter(function (s) { return getStage(s.id) === stage.key; }).length;
-            var isOn = selectedStage === stage.key;
-            return (React.createElement("div", { key: stage.key, onClick: function () { onStageClick(isOn ? null : stage.key); }, style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: isOn ? stage.color : stage.bg, cursor: "pointer", borderRight: idx < CLS_PIPE_STAGES.length - 1 ? "2px solid #fff" : "none", transition: "background .2s", padding: "4px 6px" } },
-                React.createElement("div", { style: { fontSize: 18, lineHeight: 1 } }, stage.icon),
-                React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: isOn ? "#fff" : stage.color, textTransform: "uppercase", letterSpacing: .5, marginTop: 2, textAlign: "center", lineHeight: 1.2 } }, stage.label),
-                React.createElement("div", { style: { fontSize: 15, fontWeight: 800, color: isOn ? "#fff" : stage.color, marginTop: 1 } }, cnt)));
-        })),
-        React.createElement("div", { style: { overflowX: "auto", paddingBottom: 8 } },
-            React.createElement("div", { style: { display: "flex", gap: 10, minWidth: 900 } }, CLS_PIPE_STAGES.map(function (stage) {
-                var atStage = schools.filter(function (s) { return getStage(s.id) === stage.key; });
-                var isOn = selectedStage === stage.key;
-                return (React.createElement("div", { key: stage.key, style: { flex: 1, minWidth: 148 } },
-                    React.createElement("div", { style: { background: isOn ? stage.color : stage.bg, borderRadius: "7px 7px 0 0", padding: "8px 10px", borderBottom: "2px solid " + stage.color } },
-                        React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: isOn ? "#fff" : stage.color, textTransform: "uppercase", letterSpacing: .5 } },
-                            stage.icon,
-                            " ",
-                            stage.label),
-                        React.createElement("div", { style: { fontSize: 10, color: isOn ? "rgba(255,255,255,.7)" : stage.color, marginTop: 1 } },
-                            atStage.length,
-                            " skoler")),
-                    React.createElement("div", { style: { background: "#F5F3EF", borderRadius: "0 0 7px 7px", padding: 7, minHeight: 120 } },
-                        atStage.map(function (s) {
-                            var assigned = (staff || []).filter(function (st) { return (assignments[s.id] || []).includes(st.id) && st.role === "saelger"; });
-                            var activeCohort = s.cohorts.find(function (c) { return c.status === "active"; });
-                            var classes = (activeCohort && activeCohort.classes) || [];
-                            var withRepr = classes.filter(function (c) { return c.repr1 || c.repr2; }).length;
-                            return (React.createElement("div", { key: s.id, style: { background: SFC, borderRadius: 7, padding: "9px 10px", marginBottom: 6, border: "1px solid " + BRD, boxShadow: "0 1px 3px rgba(0,0,0,.04)" } },
-                                React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: TXT, marginBottom: 2, lineHeight: 1.3 } }, s.name),
-                                React.createElement("div", { style: { fontSize: 10, color: MTD, marginBottom: 5 } },
-                                    s.city,
-                                    classes.length > 0 ? " · " + classes.length + " klasser" : ""),
-                                classes.length > 0 && React.createElement("div", { style: { fontSize: 10, color: withRepr === classes.length ? GREEN : GOLD, marginBottom: 5, fontWeight: 600 } },
-                                    withRepr,
-                                    "/",
-                                    classes.length,
-                                    " repr."),
-                                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } },
-                                    assigned.length > 0 && React.createElement("div", { style: { width: 18, height: 18, borderRadius: "50%", background: NAVY, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 700, color: "#fff" } }, assigned[0].ini),
-                                    React.createElement("select", { value: getStage(s.id), onChange: function (e) { setStage(s.id, e.target.value); }, style: { flex: 1, fontSize: 9, padding: "2px 4px", border: "1px solid " + BRD, borderRadius: 3, fontFamily: "inherit", color: MTD, background: SFC, cursor: "pointer" } }, CLS_PIPE_STAGES.map(function (ps) { return React.createElement("option", { key: ps.key, value: ps.key }, ps.label); })))));
-                        }),
-                        atStage.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: "16px 0", color: MTD, fontSize: 11 } }, "Ingen skoler"))));
-            })))));
+// ─── PIPELINE STAGES ─────────────────────────────────────────────────────────
+var KLASS_PIPE_STAGES = [
+    { key: "ingenKontakt", label: "Ikke kontaktet", color: "#7B7569", bg: "#F5F2EE", border: "#E2DDD6", icon: "○" },
+    { key: "kontaktet", label: "Kontaktet", color: "#1A4A7A", bg: "#E8EFF7", border: "#B8D0E8", icon: "📞" },
+    { key: "modeBooket", label: "Møde booket", color: "#B8892A", bg: "#F5EDD8", border: "#D4AE6A", icon: "📅" },
+    { key: "opmaaling", label: "Opmåling planlagt", color: "#6B4AAB", bg: "#F0EBF8", border: "#C4A8E0", icon: "📐" },
+    { key: "lukket", label: "Lukket / Vundet", color: "#3D6B50", bg: "#E4EFE9", border: "#8EC4A0", icon: "🏆" },
+];
+var AUTO_TASKS = {
+    kontaktet: ["Book møde med repr.", "Send intro-mail"],
+    modeBooket: ["Planlæg opmåling", "Forbered præsentation"],
+    opmaaling: ["Send tilbud", "Opfølg på opmåling"],
+    lukket: ["Bekræft leveringsadresse", "Opdater kontrakt"],
+};
+// ─── CLASS KANBAN CARD ───────────────────────────────────────────────────────
+function KlasseKort(_a) {
+    var cls = _a.cls, school = _a.school, stage = _a.stage, onClick = _a.onClick;
+    var stg = KLASS_PIPE_STAGES.find(function (s) { return s.key === stage; }) || KLASS_PIPE_STAGES[0];
+    var openTasks = (cls.pipeOpgaver || []).filter(function (t) { return !t.done; }).length;
+    var totalTasks = (cls.pipeOpgaver || []).length;
+    var hasRepr = !!(cls.repr1);
+    return (React.createElement("div", { onClick: function () { onClick(cls, school, stage); }, style: { background: "#FFFFFF", borderRadius: 10, padding: "12px 14px", marginBottom: 8, cursor: "pointer",
+            border: "1px solid #E2DDD6", boxShadow: "0 1px 3px rgba(0,0,0,.05)",
+            transition: "all .18s ease", position: "relative", overflow: "hidden" }, onMouseEnter: function (e) { e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.borderColor = stg.border; }, onMouseLeave: function (e) { e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,.05)"; e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "#E2DDD6"; } },
+        React.createElement("div", { style: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: stg.color, borderRadius: "10px 0 0 10px" } }),
+        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 } },
+            React.createElement("div", { style: { fontWeight: 700, fontSize: 14, color: "#1A1814" } }, cls.name),
+            hasRepr
+                ? React.createElement("span", { style: { fontSize: 10, background: "#E4EFE9", color: "#3D6B50", fontWeight: 700, padding: "2px 6px", borderRadius: 10 } }, "\u2713 Repr.")
+                : React.createElement("span", { style: { fontSize: 10, background: "#FAE8E6", color: "#A0392A", fontWeight: 700, padding: "2px 6px", borderRadius: 10 } }, "Ingen repr.")),
+        React.createElement("div", { style: { fontSize: 11, color: "#7B7569", marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, school.name),
+        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+            React.createElement("div", { style: { fontSize: 11, color: "#7B7569" } },
+                cls.students || 0,
+                " elever"),
+            totalTasks > 0 && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } },
+                React.createElement("div", { style: { width: 10, height: 10, borderRadius: "50%", background: openTasks > 0 ? "#B8892A" : "#3D6B50" } }),
+                React.createElement("span", { style: { fontSize: 10, color: "#7B7569", fontWeight: 600 } },
+                    totalTasks - openTasks,
+                    "/",
+                    totalTasks,
+                    " opgaver"))))));
 }
-// ─── KOMMUNIKATION ────────────────────────────────────────────────────────────
+// ─── CLASS DETAIL PANEL ──────────────────────────────────────────────────────
+function KlassePanel(_a) {
+    var cls = _a.cls, school = _a.school, stage = _a.stage, onClose = _a.onClose, onStageChange = _a.onStageChange, onUpdateCls = _a.onUpdateCls;
+    var stg = KLASS_PIPE_STAGES.find(function (s) { return s.key === stage; }) || KLASS_PIPE_STAGES[0];
+    var stab = useState("opgaver");
+    var tab = stab[0];
+    var setTab = stab[1];
+    var snt = useState("");
+    var newTask = snt[0];
+    var setNewTask = snt[1];
+    var sno = useState(cls.pipeNotes || "");
+    var notes = sno[0];
+    var setNotes = sno[1];
+    var tasks = cls.pipeOpgaver || [];
+    function addTask() {
+        if (!newTask.trim())
+            return;
+        var updated = tasks.concat([{ id: Date.now(), text: newTask.trim(), done: false, createdAt: new Date().toISOString().split("T")[0] }]);
+        onUpdateCls(cls.id, school.id, { pipeOpgaver: updated });
+        setNewTask("");
+    }
+    function toggleTask(id) {
+        var updated = tasks.map(function (t) { return t.id === id ? Object.assign({}, t, { done: !t.done }) : t; });
+        onUpdateCls(cls.id, school.id, { pipeOpgaver: updated });
+    }
+    function deleteTask(id) {
+        var updated = tasks.filter(function (t) { return t.id !== id; });
+        onUpdateCls(cls.id, school.id, { pipeOpgaver: updated });
+    }
+    function saveNotes() { onUpdateCls(cls.id, school.id, { pipeNotes: notes }); }
+    function changeStage(newStage) {
+        var autoT = AUTO_TASKS[newStage] || [];
+        var existing = tasks.map(function (t) { return t.text; });
+        var toAdd = autoT.filter(function (t) { return !existing.includes(t); }).map(function (t) { return { id: Date.now() + Math.random(), text: t, done: false, auto: true, createdAt: new Date().toISOString().split("T")[0] }; });
+        if (toAdd.length > 0)
+            onUpdateCls(cls.id, school.id, { pipeOpgaver: tasks.concat(toAdd) });
+        onStageChange(cls.id, school.id, newStage);
+    }
+    var openCount = tasks.filter(function (t) { return !t.done; }).length;
+    return (React.createElement("div", { style: { position: "fixed", top: 0, right: 0, bottom: 0, width: 440, background: "#FFFFFF",
+            boxShadow: "-8px 0 32px rgba(0,0,0,.12)", zIndex: 200, display: "flex", flexDirection: "column",
+            animation: "slideIn .22s ease" } },
+        React.createElement("style", null, "@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}"),
+        React.createElement("div", { style: { background: stg.bg, borderBottom: "1px solid " + stg.border, padding: "20px 22px 16px" } },
+            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 } },
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: "#1A1814", fontFamily: "'Playfair Display',serif" } }, cls.name),
+                    React.createElement("div", { style: { fontSize: 12, color: "#7B7569", marginTop: 2 } },
+                        school.name,
+                        " \u00B7 ",
+                        cls.students || 0,
+                        " elever")),
+                React.createElement("button", { onClick: onClose, style: { background: "rgba(0,0,0,.06)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", color: "#7B7569" } }, "\u00D7")),
+            React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap", marginTop: 10 } }, KLASS_PIPE_STAGES.map(function (s) {
+                var on = stage === s.key;
+                return (React.createElement("button", { key: s.key, onClick: function () { changeStage(s.key); }, style: { padding: "4px 10px", borderRadius: 20, border: "1px solid " + (on ? s.color : s.border),
+                        background: on ? s.color : "transparent", color: on ? "#fff" : s.color,
+                        fontSize: 11, fontWeight: on ? 700 : 500, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" } },
+                    s.icon,
+                    " ",
+                    s.label));
+            }))),
+        cls.repr1 && (React.createElement("div", { style: { padding: "12px 22px", borderBottom: "1px solid #E2DDD6", background: "#FAFAF8", display: "flex", alignItems: "center", gap: 10 } },
+            React.createElement("div", { style: { width: 32, height: 32, borderRadius: "50%", background: "#152035", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 } }, cls.repr1.name.split(" ").map(function (w) { return w[0]; }).join("").substring(0, 2)),
+            React.createElement("div", null,
+                React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#1A1814" } }, cls.repr1.name),
+                React.createElement("div", { style: { fontSize: 11, color: "#7B7569" } }, cls.repr1.email || cls.repr1.phone || "Ingen kontakt")),
+            cls.repr1.phone && React.createElement("a", { href: "tel:" + cls.repr1.phone, style: { marginLeft: "auto", padding: "5px 10px", background: "#152035", color: "#fff", borderRadius: 5, fontSize: 11, fontWeight: 600, textDecoration: "none" } }, "\uD83D\uDCDE Ring"))),
+        React.createElement("div", { style: { display: "flex", borderBottom: "1px solid #E2DDD6", background: "#FFFFFF" } }, [["opgaver", "✅ Opgaver" + (openCount > 0 ? " (" + openCount + ")" : "")], ["noter", "📝 Noter"], ["info", "ℹ️ Info"]].map(function (t) {
+            var on = tab === t[0];
+            return (React.createElement("button", { key: t[0], onClick: function () { setTab(t[0]); }, style: { flex: 1, padding: "11px 8px", border: "none", borderBottom: "2px solid " + (on ? "#152035" : "transparent"),
+                    background: "transparent", color: on ? "#152035" : "#7B7569", fontSize: 12, fontWeight: on ? 700 : 400, cursor: "pointer", fontFamily: "inherit" } }, t[1]));
+        })),
+        React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 22px" } },
+            tab === "opgaver" && (React.createElement("div", null,
+                React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 16 } },
+                    React.createElement("input", { value: newTask, onChange: function (e) { setNewTask(e.target.value); }, onKeyDown: function (e) { if (e.key === "Enter")
+                            addTask(); }, placeholder: "Ny opgave... (Enter for at tilf\u00F8je)", style: { flex: 1, padding: "9px 12px", border: "1px solid #E2DDD6", borderRadius: 6, fontSize: 13, fontFamily: "inherit", outline: "none" } }),
+                    React.createElement("button", { onClick: addTask, disabled: !newTask.trim(), style: { padding: "9px 14px", background: newTask.trim() ? "#152035" : "#E2DDD6", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "+")),
+                tasks.length === 0 && (React.createElement("div", { style: { textAlign: "center", padding: "32px 0", color: "#7B7569" } },
+                    React.createElement("div", { style: { fontSize: 32, marginBottom: 8 } }, "\u2705"),
+                    React.createElement("div", { style: { fontSize: 13, fontWeight: 600 } }, "Ingen opgaver endnu"),
+                    React.createElement("div", { style: { fontSize: 11, marginTop: 4 } }, "Tilf\u00F8j en opgave ovenfor"))),
+                tasks.filter(function (t) { return !t.done; }).map(function (t) {
+                    return (React.createElement("div", { key: t.id, style: { display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#FAFAF8", borderRadius: 7, marginBottom: 6, border: "1px solid #E2DDD6" } },
+                        React.createElement("input", { type: "checkbox", checked: false, onChange: function () { toggleTask(t.id); }, style: { width: 16, height: 16, cursor: "pointer", accentColor: "#152035" } }),
+                        React.createElement("span", { style: { flex: 1, fontSize: 13, color: "#1A1814" } }, t.text),
+                        t.auto && React.createElement("span", { style: { fontSize: 9, background: "#E8EFF7", color: "#1A4A7A", padding: "1px 5px", borderRadius: 8, fontWeight: 700 } }, "AUTO"),
+                        React.createElement("button", { onClick: function () { deleteTask(t.id); }, style: { background: "transparent", border: "none", color: "#C0BAB2", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: "0 2px" } }, "\u00D7")));
+                }),
+                tasks.filter(function (t) { return t.done; }).length > 0 && (React.createElement("div", { style: { marginTop: 12 } },
+                    React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#7B7569", textTransform: "uppercase", letterSpacing: .7, marginBottom: 6 } }, "Fuldf\u00F8rte"),
+                    tasks.filter(function (t) { return t.done; }).map(function (t) {
+                        return (React.createElement("div", { key: t.id, style: { display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 7, marginBottom: 4, opacity: .6 } },
+                            React.createElement("input", { type: "checkbox", checked: true, onChange: function () { toggleTask(t.id); }, style: { width: 16, height: 16, cursor: "pointer", accentColor: "#3D6B50" } }),
+                            React.createElement("span", { style: { flex: 1, fontSize: 12, color: "#7B7569", textDecoration: "line-through" } }, t.text),
+                            React.createElement("button", { onClick: function () { deleteTask(t.id); }, style: { background: "transparent", border: "none", color: "#C0BAB2", cursor: "pointer", fontSize: 13, lineHeight: 1 } }, "\u00D7")));
+                    }))))),
+            tab === "noter" && (React.createElement("div", null,
+                React.createElement("textarea", { value: notes, onChange: function (e) { setNotes(e.target.value); }, placeholder: "Skriv noter om klassen...", rows: 10, style: { width: "100%", padding: "12px", border: "1px solid #E2DDD6", borderRadius: 7, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none", lineHeight: 1.7, boxSizing: "border-box" } }),
+                React.createElement("button", { onClick: saveNotes, style: { marginTop: 8, padding: "8px 18px", background: "#152035", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "Gem noter"))),
+            tab === "info" && (React.createElement("div", null,
+                React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#7B7569", textTransform: "uppercase", letterSpacing: .7, marginBottom: 10 } }, "Klasse info"),
+                [["Skole", school.name], ["By", school.city], ["Elever", cls.students || 0], ["Produkter", (cls.products || []).join(", ") || "—"], ["Ordrer", cls.orders || 0], ["Omsætning", (cls.rev || 0).toLocaleString("da-DK") + " kr"]].map(function (row) {
+                    return (React.createElement("div", { key: row[0], style: { display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F0EDE8" } },
+                        React.createElement("span", { style: { fontSize: 12, color: "#7B7569" } }, row[0]),
+                        React.createElement("span", { style: { fontSize: 12, fontWeight: 600, color: "#1A1814" } }, row[1])));
+                }),
+                React.createElement("div", { style: { marginTop: 16, padding: "12px", background: "#F5F2EE", borderRadius: 7, fontSize: 12, color: "#7B7569", fontStyle: "italic" } }, "\uD83D\uDCAC Kommunikation for denne klasse vises under \"Kommunikation\" i menuen"))))));
+}
+// ─── PIPELINE + OPGAVER (UNIFIED) ────────────────────────────────────────────
+function PipelineOpgaver(_a) {
+    var user = _a.user, schools = _a.schools, setSchools = _a.setSchools, assignments = _a.assignments, staff = _a.staff, activity = _a.activity;
+    var isInternal = ["admin", "saelger", "internsalg"].includes(user.role);
+    var ssel = useState(null);
+    var selCard = ssel[0];
+    var setSelCard = ssel[1];
+    var sfil = useState("all");
+    var filterStaff = sfil[0];
+    var setFilterStaff = sfil[1];
+    var sfsc = useState("all");
+    var filterSchool = sfsc[0];
+    var setFilterSchool = sfsc[1];
+    var sdrag = useState(null);
+    var dragItem = sdrag[0];
+    var setDragItem = sdrag[1];
+    var sdover = useState(null);
+    var dragOver = sdover[0];
+    var setDragOver = sdover[1];
+    // Build flat list of all active classes with their pipeline stage
+    var allClasses = [];
+    schools.forEach(function (s) {
+        var mySchoolIds = user.role === "admin" ? true : (assignments[s.id] || []).includes(user.id);
+        if (!mySchoolIds)
+            return;
+        s.cohorts.filter(function (c) { return c.status === "active"; }).forEach(function (c) {
+            (c.classes || []).forEach(function (cl) {
+                allClasses.push({
+                    cls: Object.assign({}, cl),
+                    school: s,
+                    cohortId: c.id,
+                    stage: cl.pipeStage || "ingenKontakt",
+                });
+            });
+        });
+    });
+    // Filter
+    var filtered = allClasses.filter(function (item) {
+        if (filterSchool !== "all" && item.school.id !== Number(filterSchool))
+            return false;
+        if (filterStaff !== "all") {
+            var asgn = (assignments[item.school.id] || []);
+            if (!asgn.includes(Number(filterStaff)))
+                return false;
+        }
+        return true;
+    });
+    function updateCls(clsId, schoolId, patch) {
+        setSchools(function (prev) {
+            return prev.map(function (s) {
+                if (s.id !== schoolId)
+                    return s;
+                return Object.assign({}, s, { cohorts: s.cohorts.map(function (c) {
+                        return Object.assign({}, c, { classes: (c.classes || []).map(function (cl) {
+                                if (cl.id !== clsId)
+                                    return cl;
+                                return Object.assign({}, cl, patch);
+                            }) });
+                    }) });
+            });
+        });
+        // Update selCard if open
+        if (selCard && selCard.cls.id === clsId) {
+            setSelCard(function (prev) { return prev ? Object.assign({}, prev, { cls: Object.assign({}, prev.cls, patch) }) : null; });
+        }
+    }
+    function setStage(clsId, schoolId, stage) {
+        updateCls(clsId, schoolId, { pipeStage: stage });
+        if (selCard && selCard.cls.id === clsId) {
+            setSelCard(function (prev) { return prev ? Object.assign({}, prev, { stage: stage }) : null; });
+        }
+    }
+    // Drag handlers
+    function onDragStart(item) { setDragItem(item); }
+    function onDragOver(e, stageKey) { e.preventDefault(); setDragOver(stageKey); }
+    function onDrop(stageKey) {
+        if (dragItem && dragItem.stage !== stageKey) {
+            setStage(dragItem.cls.id, dragItem.school.id, stageKey);
+        }
+        setDragItem(null);
+        setDragOver(null);
+    }
+    // "Mine opgaver" widget data
+    var today = new Date().toISOString().split("T")[0];
+    var allTasks = [];
+    allClasses.forEach(function (item) {
+        (item.cls.pipeOpgaver || []).filter(function (t) { return !t.done; }).forEach(function (t) {
+            allTasks.push(Object.assign({}, t, { clsName: item.cls.name, schoolName: item.school.name, clsId: item.cls.id, schoolId: item.school.id }));
+        });
+    });
+    var overdueTasks = allTasks.filter(function (t) { return t.createdAt && t.createdAt < today; }).slice(0, 3);
+    var todayTasks = allTasks.filter(function (t) { return t.createdAt === today; }).slice(0, 3);
+    var mySchools = schools.filter(function (s) { return user.role === "admin" || (assignments[s.id] || []).includes(user.id); });
+    var internalStaff = (staff || []).filter(function (s) { return s.role !== "repr"; });
+    return (React.createElement("div", { style: { display: "flex", height: "calc(100vh - 56px)", overflow: "hidden", background: "#F8F6F2" } },
+        React.createElement("div", { style: { width: 220, background: "#FFFFFF", borderRight: "1px solid #E2DDD6", overflowY: "auto", flexShrink: 0, display: "flex", flexDirection: "column" } },
+            React.createElement("div", { style: { padding: "16px 14px", borderBottom: "1px solid #E2DDD6" } },
+                React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#1A1814", marginBottom: 2 } }, "Mine opgaver"),
+                React.createElement("div", { style: { fontSize: 11, color: "#7B7569" } },
+                    allTasks.length,
+                    " \u00E5bne i alt")),
+            overdueTasks.length > 0 && (React.createElement("div", { style: { padding: "10px 14px", borderBottom: "1px solid #E2DDD6" } },
+                React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#A0392A", textTransform: "uppercase", letterSpacing: .7, marginBottom: 6 } }, "\u26A0\uFE0F Forsinkede"),
+                overdueTasks.map(function (t) {
+                    return (React.createElement("div", { key: t.id, style: { padding: "6px 8px", background: "#FAE8E6", borderRadius: 5, marginBottom: 4, borderLeft: "3px solid #A0392A" } },
+                        React.createElement("div", { style: { fontSize: 11, fontWeight: 600, color: "#1A1814" } }, t.text.length > 28 ? t.text.substring(0, 28) + "..." : t.text),
+                        React.createElement("div", { style: { fontSize: 10, color: "#7B7569", marginTop: 1 } },
+                            t.clsName,
+                            " \u00B7 ",
+                            t.schoolName.split(" ")[0])));
+                }))),
+            todayTasks.length > 0 && (React.createElement("div", { style: { padding: "10px 14px", borderBottom: "1px solid #E2DDD6" } },
+                React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#B8892A", textTransform: "uppercase", letterSpacing: .7, marginBottom: 6 } }, "\uD83D\uDCC5 I dag"),
+                todayTasks.map(function (t) {
+                    return (React.createElement("div", { key: t.id, style: { padding: "6px 8px", background: "#F5EDD8", borderRadius: 5, marginBottom: 4, borderLeft: "3px solid #B8892A" } },
+                        React.createElement("div", { style: { fontSize: 11, fontWeight: 600, color: "#1A1814" } }, t.text.length > 28 ? t.text.substring(0, 28) + "..." : t.text),
+                        React.createElement("div", { style: { fontSize: 10, color: "#7B7569", marginTop: 1 } }, t.clsName)));
+                }))),
+            allTasks.length === 0 && (React.createElement("div", { style: { padding: "24px 14px", textAlign: "center", color: "#7B7569" } },
+                React.createElement("div", { style: { fontSize: 28, marginBottom: 6 } }, "\uD83C\uDF89"),
+                React.createElement("div", { style: { fontSize: 12, fontWeight: 600 } }, "Ingen opgaver"))),
+            React.createElement("div", { style: { padding: "12px 14px", marginTop: "auto", borderTop: "1px solid #E2DDD6" } },
+                React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#7B7569", textTransform: "uppercase", letterSpacing: .7, marginBottom: 6 } }, "Filter"),
+                React.createElement("select", { value: filterSchool, onChange: function (e) { setFilterSchool(e.target.value); }, style: { width: "100%", padding: "6px 8px", borderRadius: 4, border: "1px solid #E2DDD6", fontSize: 11, fontFamily: "inherit", marginBottom: 6, color: "#1A1814" } },
+                    React.createElement("option", { value: "all" }, "Alle skoler"),
+                    mySchools.map(function (s) { return React.createElement("option", { key: s.id, value: s.id }, s.name.split(" ")[0]); })),
+                user.role === "admin" && (React.createElement("select", { value: filterStaff, onChange: function (e) { setFilterStaff(e.target.value); }, style: { width: "100%", padding: "6px 8px", borderRadius: 4, border: "1px solid #E2DDD6", fontSize: 11, fontFamily: "inherit", color: "#1A1814" } },
+                    React.createElement("option", { value: "all" }, "Alle medarbejdere"),
+                    internalStaff.map(function (s) { return React.createElement("option", { key: s.id, value: s.id }, s.name); }))))),
+        React.createElement("div", { style: { flex: 1, overflowX: "auto", overflowY: "hidden", display: "flex", flexDirection: "column" } },
+            React.createElement("div", { style: { padding: "14px 20px 12px", borderBottom: "1px solid #E2DDD6", background: "#FFFFFF", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 } },
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: "#1A1814", fontFamily: "'Playfair Display',serif" } }, "Pipeline & Opgaver"),
+                    React.createElement("div", { style: { fontSize: 11, color: "#7B7569", marginTop: 1 } },
+                        filtered.length,
+                        " klasser \u00B7 Tr\u00E6k kort for at \u00E6ndre status")),
+                React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } }, KLASS_PIPE_STAGES.map(function (s) {
+                    var cnt = filtered.filter(function (i) { return i.stage === s.key; }).length;
+                    return (React.createElement("div", { key: s.key, style: { textAlign: "center", padding: "4px 10px", borderRadius: 6, background: s.bg, border: "1px solid " + s.border } },
+                        React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: s.color } }, cnt),
+                        React.createElement("div", { style: { fontSize: 9, color: s.color, fontWeight: 600 } }, s.label.split(" ")[0])));
+                }))),
+            React.createElement("div", { style: { display: "flex", gap: 0, flex: 1, overflowY: "hidden", minWidth: 900 } }, KLASS_PIPE_STAGES.map(function (stg, idx) {
+                var colItems = filtered.filter(function (item) { return item.stage === stg.key; });
+                var isDragTarget = dragOver === stg.key;
+                return (React.createElement("div", { key: stg.key, onDragOver: function (e) { onDragOver(e, stg.key); }, onDrop: function () { onDrop(stg.key); }, onDragLeave: function () { setDragOver(null); }, style: { flex: 1, borderRight: idx < KLASS_PIPE_STAGES.length - 1 ? "1px solid #E2DDD6" : "none",
+                        background: isDragTarget ? stg.bg : "#F8F6F2", transition: "background .2s",
+                        display: "flex", flexDirection: "column", minWidth: 160 } },
+                    React.createElement("div", { style: { padding: "12px 12px 8px", background: stg.bg, borderBottom: "2px solid " + stg.border, flexShrink: 0 } },
+                        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 2 } },
+                            React.createElement("span", { style: { fontSize: 14 } }, stg.icon),
+                            React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: stg.color, textTransform: "uppercase", letterSpacing: .5 } }, stg.label)),
+                        React.createElement("span", { style: { fontSize: 20, fontWeight: 800, color: stg.color } }, colItems.length)),
+                    React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "10px 10px" } },
+                        colItems.map(function (item) {
+                            return (React.createElement("div", { key: item.cls.id, draggable: true, onDragStart: function () { onDragStart(item); }, onDragEnd: function () { setDragItem(null); setDragOver(null); } },
+                                React.createElement(KlasseKort, { cls: item.cls, school: item.school, stage: item.stage, onClick: function (cls, school, stage) { setSelCard({ cls: cls, school: school, stage: stage }); } })));
+                        }),
+                        colItems.length === 0 && (React.createElement("div", { style: { textAlign: "center", padding: "20px 8px", color: "#C0BAB2", fontSize: 11, border: "2px dashed " + (isDragTarget ? stg.border : "#E2DDD6"), borderRadius: 8, marginTop: 4, transition: "border .2s" } }, isDragTarget ? "Slip her" : "Tom")))));
+            }))),
+        selCard && (React.createElement(React.Fragment, null,
+            React.createElement("div", { onClick: function () { setSelCard(null); }, style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.2)", zIndex: 199 } }),
+            React.createElement(KlassePanel, { cls: selCard.cls, school: selCard.school, stage: selCard.stage, onClose: function () { setSelCard(null); }, onStageChange: setStage, onUpdateCls: updateCls })))));
+}
 function Kommunikation(_a) {
     var user = _a.user, schools = _a.schools, assignments = _a.assignments, staff = _a.staff, activity = _a.activity, setActivity = _a.setActivity, posts = _a.posts, setPosts = _a.setPosts, schoolPipeline = _a.schoolPipeline, setSchoolPipeline = _a.setSchoolPipeline;
     var scp = useState(null);
@@ -1506,13 +1772,13 @@ function NyAargangModal(_a) {
 }
 //  NAV 
 var PAGES = {
-    admin: ["dashboard", "skoler", "kommunikation", "rapporter", "indstillinger", "guides"],
-    saelger: ["dashboard", "skoler", "kommunikation", "rapporter", "guides"],
-    internsalg: ["dashboard", "skoler", "kommunikation", "rapporter", "guides"],
+    admin: ["dashboard", "skoler", "pipeline", "kommunikation", "rapporter", "indstillinger", "guides"],
+    saelger: ["dashboard", "skoler", "pipeline", "kommunikation", "rapporter", "guides"],
+    internsalg: ["dashboard", "skoler", "pipeline", "kommunikation", "rapporter", "guides"],
     repr: ["dashboard", "minskole", "kommunikation", "guides"],
 };
-var PLBL = { dashboard: "Dashboard", skoler: "Skoler", traditioner: "Traditioner", kommunikation: "Kommunikation", rapporter: "Rapporter", indstillinger: "Indstillinger", guides: "Guides", minskole: "Min skole" };
-var PICONS = { dashboard: "⊞", skoler: "⌂", traditioner: "★", kommunikation: "✉", rapporter: "▦", indstillinger: "⚙", guides: "▤", minskole: "⌂" };
+var PLBL = { dashboard: "Dashboard", skoler: "Skoler", pipeline: "Pipeline", traditioner: "Traditioner", kommunikation: "Kommunikation", rapporter: "Rapporter", indstillinger: "Indstillinger", guides: "Guides", minskole: "Min skole" };
+var PICONS = { dashboard: "⊞", skoler: "⌂", pipeline: "◈", traditioner: "★", kommunikation: "✉", rapporter: "▦", indstillinger: "⚙", guides: "▤", minskole: "⌂" };
 function Sidebar(_a) {
     var user = _a.user, page = _a.page, go = _a.go, logout = _a.logout, notifCount = _a.notifCount, sagCount = _a.sagCount, opgaveCount = _a.opgaveCount;
     var items = PAGES[user.role];
@@ -3756,6 +4022,7 @@ function App() {
                 page === "dashboard" && React.createElement(Dashboard, { user: user, schools: schools, events: events, activity: activity, assignments: assignments, staff: staff, pipeline: pipeline }),
                 page === "skoler" && React.createElement(Skoler, { user: user, schools: schools, setSchools: setSchools, assignments: assignments, pipeline: pipeline, setPipeline: setPipeline, events: events, setEvents: setEvents, prodStatus: prodStatus, setProdStatus: setProdStatus, elever: elever, setElever: setElever, templates: templates, opgaver: opgaver, setOpgaver: setOpgaver, classNotes: classNotes, setClassNotes: setClassNotes, customFilters: customFilters, setCustomFilters: setCustomFilters, customKonkurrenter: customKonkurrenter, modeskabeloner: modeskabeloner, showArkiv: showArkiv, setShowArkiv: setShowArkiv, konkurrentProfiler: konkurrentProfiler, modeProfiler: modeProfiler }),
                 page === "traditioner" && React.createElement(Traditioner, { user: user, schools: schools, setSchools: setSchools, assignments: assignments, customFilters: customFilters, setCustomFilters: setCustomFilters, customKonkurrenter: customKonkurrenter, modeskabeloner: modeskabeloner }),
+                page === "pipeline" && ["admin", "saelger", "internsalg"].includes(user.role) && React.createElement(PipelineOpgaver, { user: user, schools: schools, setSchools: setSchools, assignments: assignments, staff: staff, activity: activity }),
                 page === "kommunikation" && React.createElement(Kommunikation, { user: user, schools: schools, assignments: assignments, staff: staff, activity: activity, setActivity: setActivity, posts: posts, setPosts: setPosts, schoolPipeline: schoolPipeline, setSchoolPipeline: setSchoolPipeline }),
                 page === "rapporter" && React.createElement(Rapporter, { user: user, schools: schools, setSchools: setSchools, activity: activity, assignments: assignments, staff: staff, pipeline: pipeline, konkurrentProfiler: konkurrentProfiler, customKonkurrenter: customKonkurrenter, customFilters: customFilters, setCustomFilters: setCustomFilters }),
                 page === "indstillinger" && React.createElement(Indstillinger, { user: user, schools: schools, assignments: assignments, setAssignments: setAssignments, templates: templates, setTemplates: setTemplates, opgaver: opgaver, setOpgaver: setOpgaver, customKonkurrenter: customKonkurrenter, setCustomKonkurrenter: setCustomKonkurrenter, modeskabeloner: modeskabeloner, setModeskabeloner: setModeskabeloner, konkurrentProfiler: konkurrentProfiler, setKonkurrentProfiler: setKonkurrentProfiler, modeProfiler: modeProfiler, setModeProfiler: setModeProfiler, staff: staff, setStaff: setStaff, sager: sager, pipeline: pipeline }),
