@@ -10,6 +10,7 @@
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script>
+
 (function(){
 var React=window.React;
 var ReactDOM=window.ReactDOM;
@@ -30,6 +31,9 @@ var ReactDOM = window.ReactDOM;
 var useState = React.useState;
 var useEffect = React.useEffect;
 var useRef = React.useRef;
+var _css = "* { box-sizing: border-box } ::-webkit-scrollbar { width:5px; height:5px } ::-webkit-scrollbar-thumb { background:#D4CFC8; border-radius:10px } button:focus-visible,input:focus-visible,select:focus-visible { outline:2px solid #B8892A; outline-offset:2px } @keyframes fadeIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } } @keyframes slideIn { from { transform:translateX(100%) } to { transform:translateX(0) } }";
+var _st = document.createElement("style"); _st.textContent = _css; document.head.appendChild(_st);
+
 var BG = "#F8F6F2", SFC = "#FFFFFF", NAVY = "#152035", NAVY2 = "#1E2F4A", GOLD = "#B8892A", GOLDBG = "#F5EDD8", BRD = "#E2DDD6", TXT = "#1A1814", MTD = "#7B7569", GREEN = "#3D6B50", GBGN = "#E4EFE9", RED = "#A0392A", REDBG = "#FAE8E6", BLUE = "#1A4A7A", BLUEBG = "#E8EFF8", PURP = "#5B3A8A", PURPBG = "#EDE8F5";
 var USERS = {
     admin: { id: 1, name: "Anders Nielsen", role: "admin", ini: "AN", gdprAccepted: true, gdprDate: "2026-01-01" },
@@ -85,6 +89,24 @@ var OPGAVE_COL = { "Aben": { c: RED, bg: REDBG }, "I gang": { c: GOLD, bg: GOLDB
 var KAT_COL = { A: { c: GREEN, bg: GBGN }, B: { c: GOLD, bg: GOLDBG }, C: { c: MTD, bg: "#F0EDE8" } };
 var PROC_STATUSES = ["Invited", "Ingen møder", "Virtuel", "Fuld proces"];
 var PROC_COL = { "Invited": { c: BLUE, bg: BLUEBG }, "Ingen møder": { c: MTD, bg: "#F0EDE8" }, "Virtuel": { c: PURP, bg: PURPBG }, "Fuld proces": { c: GREEN, bg: GBGN } };
+
+var MONTHS_SHORT = ["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"];
+function fmtDate(d) { if(!d) return ""; var p=d.split("-"); return parseInt(p[2])+". "+MONTHS_SHORT[parseInt(p[1])-1]; }
+function todayStr() { return new Date().toISOString().split("T")[0]; }
+function isOverdue(dl, st) { return dl && dl < todayStr() && st !== "done"; }
+
+// ─── LOCALSTORAGE HOOK ────────────────────────────────────────────────────────
+function useLS(key, init) {
+    var stored = null;
+    try { var r = localStorage.getItem("cls_"+key); stored = r ? JSON.parse(r) : null; } catch(e){}
+    var s = useState(stored !== null ? stored : (typeof init==="function"?init():init));
+    var val=s[0]; var set0=s[1];
+    function set(v){ set0(function(prev){ var next=typeof v==="function"?v(prev):v; try{localStorage.setItem("cls_"+key,JSON.stringify(next));}catch(e){} return next; }); }
+    return [val,set];
+}
+function clearLS(){ try{Object.keys(localStorage).filter(function(k){return k.startsWith("cls_");}).forEach(function(k){localStorage.removeItem(k);});}catch(e){} }
+
+
 // Default traditioner template per skole per produkt
 // School-level permanent info (does not change year-to-year)
 function defaultTrad() {
@@ -435,8 +457,6 @@ function FeedPost(_a) {
     var userId = "u_" + user.id;
     var hasLiked = likeList.includes(userId);
     var hasHearted = heartList.includes(userId);
-    function fmtDate(d) { if (!d)
-        return ""; var m = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]; var p = d.split("-"); return p[2] + " " + m[parseInt(p[1]) - 1]; }
     function submitComment() {
         if (!commentText.trim())
             return;
@@ -499,330 +519,482 @@ function FeedPost(_a) {
 }
 // ─── PIPELINE KANBAN ─────────────────────────────────────────────────────────
 // ─── PIPELINE STAGES ─────────────────────────────────────────────────────────
-var KLASS_PIPE_STAGES = [
-    { key: "ingenKontakt", label: "Ikke kontaktet", color: "#7B7569", bg: "#F5F2EE", border: "#E2DDD6", icon: "○" },
-    { key: "kontaktet", label: "Kontaktet", color: "#1A4A7A", bg: "#E8EFF7", border: "#B8D0E8", icon: "📞" },
-    { key: "modeBooket", label: "Møde booket", color: "#B8892A", bg: "#F5EDD8", border: "#D4AE6A", icon: "📅" },
-    { key: "opmaaling", label: "Opmåling planlagt", color: "#6B4AAB", bg: "#F0EBF8", border: "#C4A8E0", icon: "📐" },
-    { key: "lukket", label: "Lukket / Vundet", color: "#3D6B50", bg: "#E4EFE9", border: "#8EC4A0", icon: "🏆" },
+// ─── PIPELINE STAGES (CONFIGURABLE) ──────────────────────────────────────────
+var INIT_PIPE_STAGES = [
+    { id: "s1", label: "Ikke kontaktet", color: "#7B7569", bg: "#F5F2EE", border: "#E2DDD6" },
+    { id: "s2", label: "Kontaktet", color: "#1A4A7A", bg: "#E8EFF7", border: "#B8D0E8" },
+    { id: "s3", label: "Moede booket", color: "#B8892A", bg: "#F5EDD8", border: "#D4AE6A" },
+    { id: "s4", label: "Opmaaling", color: "#6B4AAB", bg: "#F0EBF8", border: "#C4A8E0" },
+    { id: "s5", label: "Aftale sendt", color: "#1A7A5A", bg: "#E4EFE9", border: "#8EC4A0" },
+    { id: "s6", label: "Lukket", color: "#3D6B50", bg: "#D6EBE0", border: "#5DAB7A" },
 ];
-var AUTO_TASKS = {
-    kontaktet: ["Book møde med repr.", "Send intro-mail"],
-    modeBooket: ["Planlæg opmåling", "Forbered præsentation"],
-    opmaaling: ["Send tilbud", "Opfølg på opmåling"],
-    lukket: ["Bekræft leveringsadresse", "Opdater kontrakt"],
+var PIPE_AUTO_TASKS = {
+    s2: ["Book moede med repr.", "Send intro-mail"],
+    s3: ["Forbered moedemateriale", "Bekraeft moedetid"],
+    s4: ["Book opmaalingsdato", "Send liste over elever"],
+    s5: ["Opfoelg paa tilbud", "Afklar detaljer"],
+    s6: ["Bekraeft leveringsadresse", "Opdater kontrakt"],
 };
-// ─── CLASS KANBAN CARD ───────────────────────────────────────────────────────
-function KlasseKort(_a) {
-    var cls = _a.cls, school = _a.school, stage = _a.stage, onClick = _a.onClick;
-    var stg = KLASS_PIPE_STAGES.find(function (s) { return s.key === stage; }) || KLASS_PIPE_STAGES[0];
-    var openTasks = (cls.pipeOpgaver || []).filter(function (t) { return !t.done; }).length;
-    var totalTasks = (cls.pipeOpgaver || []).length;
-    var hasRepr = !!(cls.repr1);
-    return (React.createElement("div", { onClick: function () { onClick(cls, school, stage); }, style: { background: "#FFFFFF", borderRadius: 10, padding: "12px 14px", marginBottom: 8, cursor: "pointer",
-            border: "1px solid #E2DDD6", boxShadow: "0 1px 3px rgba(0,0,0,.05)",
-            transition: "all .18s ease", position: "relative", overflow: "hidden" }, onMouseEnter: function (e) { e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.borderColor = stg.border; }, onMouseLeave: function (e) { e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,.05)"; e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "#E2DDD6"; } },
+// ─── SKOLE KANBAN KORT ───────────────────────────────────────────────────────
+function SkoleKort(_a) {
+    var item = _a.item, stages = _a.stages, onClick = _a.onClick, onDragStart = _a.onDragStart;
+    var stg = stages.find(function (s) { return s.id === item.stage; }) || stages[0];
+    var openTasks = (item.tasks || []).filter(function (t) { return t.status !== "done"; }).length;
+    var overdue = (item.tasks || []).filter(function (t) { return t.status !== "done" && t.deadline && t.deadline < new Date().toISOString().split("T")[0]; }).length;
+    var classes = (item.cohort && item.cohort.classes) || [];
+    var withRepr = classes.filter(function (c) { return c.repr1; }).length;
+    return (React.createElement("div", { draggable: true, onClick: function () { onClick(item); }, onDragStart: function () { onDragStart(item); }, style: { background: "#fff", borderRadius: 10, padding: "13px 14px", marginBottom: 8, cursor: "pointer",
+            border: "1px solid #E2DDD6", boxShadow: "0 1px 4px rgba(0,0,0,.05)", transition: "all .18s", position: "relative" }, onMouseEnter: function (e) { e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.borderColor = stg.border; }, onMouseLeave: function (e) { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05)"; e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "#E2DDD6"; } },
         React.createElement("div", { style: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: stg.color, borderRadius: "10px 0 0 10px" } }),
-        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 } },
-            React.createElement("div", { style: { fontWeight: 700, fontSize: 14, color: "#1A1814" } }, cls.name),
-            hasRepr
-                ? React.createElement("span", { style: { fontSize: 10, background: "#E4EFE9", color: "#3D6B50", fontWeight: 700, padding: "2px 6px", borderRadius: 10 } }, "\u2713 Repr.")
-                : React.createElement("span", { style: { fontSize: 10, background: "#FAE8E6", color: "#A0392A", fontWeight: 700, padding: "2px 6px", borderRadius: 10 } }, "Ingen repr.")),
-        React.createElement("div", { style: { fontSize: 11, color: "#7B7569", marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, school.name),
-        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-            React.createElement("div", { style: { fontSize: 11, color: "#7B7569" } },
-                cls.students || 0,
-                " elever"),
-            totalTasks > 0 && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } },
-                React.createElement("div", { style: { width: 10, height: 10, borderRadius: "50%", background: openTasks > 0 ? "#B8892A" : "#3D6B50" } }),
-                React.createElement("span", { style: { fontSize: 10, color: "#7B7569", fontWeight: 600 } },
-                    totalTasks - openTasks,
-                    "/",
-                    totalTasks,
-                    " opgaver"))))));
+        React.createElement("div", { style: { fontWeight: 700, fontSize: 14, color: "#1A1814", marginBottom: 3, paddingLeft: 4 } }, item.label),
+        React.createElement("div", { style: { fontSize: 11, color: "#7B7569", marginBottom: 8, paddingLeft: 4 } },
+            classes.length,
+            " klasser \u00B7 ",
+            withRepr,
+            "/",
+            classes.length,
+            " repr."),
+        React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap", paddingLeft: 4 } },
+            overdue > 0 && React.createElement("span", { style: { fontSize: 10, background: "#FAE8E6", color: "#A0392A", fontWeight: 700, padding: "2px 7px", borderRadius: 10 } },
+                "\u26A0\uFE0F ",
+                overdue,
+                " forsinkede"),
+            openTasks > 0 && React.createElement("span", { style: { fontSize: 10, background: "#F5EDD8", color: "#B8892A", fontWeight: 700, padding: "2px 7px", borderRadius: 10 } },
+                "\u2705 ",
+                openTasks,
+                " opgaver"),
+            openTasks === 0 && React.createElement("span", { style: { fontSize: 10, background: "#E4EFE9", color: "#3D6B50", fontWeight: 700, padding: "2px 7px", borderRadius: 10 } }, "Klar"))));
 }
-// ─── CLASS DETAIL PANEL ──────────────────────────────────────────────────────
-function KlassePanel(_a) {
-    var cls = _a.cls, school = _a.school, stage = _a.stage, onClose = _a.onClose, onStageChange = _a.onStageChange, onUpdateCls = _a.onUpdateCls;
-    var stg = KLASS_PIPE_STAGES.find(function (s) { return s.key === stage; }) || KLASS_PIPE_STAGES[0];
+// ─── SKOLE SIDE PANEL ────────────────────────────────────────────────────────
+function SkolePipePanel(_a) {
+    var item = _a.item, stages = _a.stages, onClose = _a.onClose, onStageChange = _a.onStageChange, onUpdateItem = _a.onUpdateItem, addToast = _a.addToast;
+    var stg = stages.find(function (s) { return s.id === item.stage; }) || stages[0];
     var stab = useState("opgaver");
     var tab = stab[0];
     var setTab = stab[1];
     var snt = useState("");
     var newTask = snt[0];
     var setNewTask = snt[1];
-    var sno = useState(cls.pipeNotes || "");
-    var notes = sno[0];
-    var setNotes = sno[1];
-    var tasks = cls.pipeOpgaver || [];
+    var snd = useState("");
+    var newDeadline = snd[0];
+    var setNewDeadline = snd[1];
+    var smob = useState(false);
+    var showMob = smob[0]; var setShowMob = smob[1];
+    var today = new Date().toISOString().split("T")[0];
+    var tasks = item.tasks || [];
+    var classes = (item.cohort && item.cohort.classes) || [];
     function addTask() {
         if (!newTask.trim())
             return;
-        var updated = tasks.concat([{ id: Date.now(), text: newTask.trim(), done: false, createdAt: new Date().toISOString().split("T")[0] }]);
-        onUpdateCls(cls.id, school.id, { pipeOpgaver: updated });
+        var t = { id: Date.now(), text: newTask.trim(), status: "open", deadline: newDeadline || null, createdAt: today, auto: false };
+        onUpdateItem(item.id, { tasks: tasks.concat([t]) });
         setNewTask("");
+        setNewDeadline("");
     }
-    function toggleTask(id) {
-        var updated = tasks.map(function (t) { return t.id === id ? Object.assign({}, t, { done: !t.done }) : t; });
-        onUpdateCls(cls.id, school.id, { pipeOpgaver: updated });
+    function cycleStatus(taskId) {
+        var cycle = { open: "inprogress", inprogress: "done", done: "open" };
+        onUpdateItem(item.id, { tasks: tasks.map(function (t) { return t.id === taskId ? Object.assign({}, t, { status: cycle[t.status] || "open" }) : t; }) });
     }
-    function deleteTask(id) {
-        var updated = tasks.filter(function (t) { return t.id !== id; });
-        onUpdateCls(cls.id, school.id, { pipeOpgaver: updated });
-    }
-    function saveNotes() { onUpdateCls(cls.id, school.id, { pipeNotes: notes }); }
-    function changeStage(newStage) {
-        var autoT = AUTO_TASKS[newStage] || [];
+    function deleteTask(taskId) { onUpdateItem(item.id, { tasks: tasks.filter(function (t) { return t.id !== taskId; }) }); }
+    function changeStage(stageId) {
+        var autoT = PIPE_AUTO_TASKS[stageId] || [];
         var existing = tasks.map(function (t) { return t.text; });
-        var toAdd = autoT.filter(function (t) { return !existing.includes(t); }).map(function (t) { return { id: Date.now() + Math.random(), text: t, done: false, auto: true, createdAt: new Date().toISOString().split("T")[0] }; });
-        if (toAdd.length > 0)
-            onUpdateCls(cls.id, school.id, { pipeOpgaver: tasks.concat(toAdd) });
-        onStageChange(cls.id, school.id, newStage);
+        var toAdd = autoT.filter(function (t) { return !existing.includes(t); }).map(function (t) { return { id: Date.now() + Math.random(), text: t, status: "open", deadline: null, createdAt: today, auto: true }; });
+        var newTasks = toAdd.length > 0 ? tasks.concat(toAdd) : tasks;
+        onUpdateItem(item.id, { stage: stageId, tasks: newTasks });
+        onStageChange(item.id, stageId);
+        if (toAdd.length > 0 && addToast) addToast({ type:"email", msg:"✉️ "+toAdd.length+" auto-opgave(r) oprettet · Notifikation simuleret" });
     }
-    var openCount = tasks.filter(function (t) { return !t.done; }).length;
-    return (React.createElement("div", { style: { position: "fixed", top: 0, right: 0, bottom: 0, width: 440, background: "#FFFFFF",
-            boxShadow: "-8px 0 32px rgba(0,0,0,.12)", zIndex: 200, display: "flex", flexDirection: "column",
-            animation: "slideIn .22s ease" } },
-        React.createElement("style", null, "@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}"),
-        React.createElement("div", { style: { background: stg.bg, borderBottom: "1px solid " + stg.border, padding: "20px 22px 16px" } },
-            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 } },
-                React.createElement("div", null,
-                    React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: "#1A1814", fontFamily: "'Playfair Display',serif" } }, cls.name),
-                    React.createElement("div", { style: { fontSize: 12, color: "#7B7569", marginTop: 2 } },
-                        school.name,
-                        " \u00B7 ",
-                        cls.students || 0,
-                        " elever")),
-                React.createElement("button", { onClick: onClose, style: { background: "rgba(0,0,0,.06)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", color: "#7B7569" } }, "\u00D7")),
-            React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap", marginTop: 10 } }, KLASS_PIPE_STAGES.map(function (s) {
-                var on = stage === s.key;
-                return (React.createElement("button", { key: s.key, onClick: function () { changeStage(s.key); }, style: { padding: "4px 10px", borderRadius: 20, border: "1px solid " + (on ? s.color : s.border),
-                        background: on ? s.color : "transparent", color: on ? "#fff" : s.color,
-                        fontSize: 11, fontWeight: on ? 700 : 500, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" } },
-                    s.icon,
-                    " ",
-                    s.label));
-            }))),
-        cls.repr1 && (React.createElement("div", { style: { padding: "12px 22px", borderBottom: "1px solid #E2DDD6", background: "#FAFAF8", display: "flex", alignItems: "center", gap: 10 } },
-            React.createElement("div", { style: { width: 32, height: 32, borderRadius: "50%", background: "#152035", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 } }, cls.repr1.name.split(" ").map(function (w) { return w[0]; }).join("").substring(0, 2)),
-            React.createElement("div", null,
-                React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#1A1814" } }, cls.repr1.name),
-                React.createElement("div", { style: { fontSize: 11, color: "#7B7569" } }, cls.repr1.email || cls.repr1.phone || "Ingen kontakt")),
-            cls.repr1.phone && React.createElement("a", { href: "tel:" + cls.repr1.phone, style: { marginLeft: "auto", padding: "5px 10px", background: "#152035", color: "#fff", borderRadius: 5, fontSize: 11, fontWeight: 600, textDecoration: "none" } }, "\uD83D\uDCDE Ring"))),
-        React.createElement("div", { style: { display: "flex", borderBottom: "1px solid #E2DDD6", background: "#FFFFFF" } }, [["opgaver", "✅ Opgaver" + (openCount > 0 ? " (" + openCount + ")" : "")], ["noter", "📝 Noter"], ["info", "ℹ️ Info"]].map(function (t) {
-            var on = tab === t[0];
-            return (React.createElement("button", { key: t[0], onClick: function () { setTab(t[0]); }, style: { flex: 1, padding: "11px 8px", border: "none", borderBottom: "2px solid " + (on ? "#152035" : "transparent"),
-                    background: "transparent", color: on ? "#152035" : "#7B7569", fontSize: 12, fontWeight: on ? 700 : 400, cursor: "pointer", fontFamily: "inherit" } }, t[1]));
-        })),
-        React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 22px" } },
-            tab === "opgaver" && (React.createElement("div", null,
-                React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 16 } },
-                    React.createElement("input", { value: newTask, onChange: function (e) { setNewTask(e.target.value); }, onKeyDown: function (e) { if (e.key === "Enter")
-                            addTask(); }, placeholder: "Ny opgave... (Enter for at tilf\u00F8je)", style: { flex: 1, padding: "9px 12px", border: "1px solid #E2DDD6", borderRadius: 6, fontSize: 13, fontFamily: "inherit", outline: "none" } }),
-                    React.createElement("button", { onClick: addTask, disabled: !newTask.trim(), style: { padding: "9px 14px", background: newTask.trim() ? "#152035" : "#E2DDD6", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "+")),
-                tasks.length === 0 && (React.createElement("div", { style: { textAlign: "center", padding: "32px 0", color: "#7B7569" } },
-                    React.createElement("div", { style: { fontSize: 32, marginBottom: 8 } }, "\u2705"),
-                    React.createElement("div", { style: { fontSize: 13, fontWeight: 600 } }, "Ingen opgaver endnu"),
-                    React.createElement("div", { style: { fontSize: 11, marginTop: 4 } }, "Tilf\u00F8j en opgave ovenfor"))),
-                tasks.filter(function (t) { return !t.done; }).map(function (t) {
-                    return (React.createElement("div", { key: t.id, style: { display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#FAFAF8", borderRadius: 7, marginBottom: 6, border: "1px solid #E2DDD6" } },
-                        React.createElement("input", { type: "checkbox", checked: false, onChange: function () { toggleTask(t.id); }, style: { width: 16, height: 16, cursor: "pointer", accentColor: "#152035" } }),
-                        React.createElement("span", { style: { flex: 1, fontSize: 13, color: "#1A1814" } }, t.text),
-                        t.auto && React.createElement("span", { style: { fontSize: 9, background: "#E8EFF7", color: "#1A4A7A", padding: "1px 5px", borderRadius: 8, fontWeight: 700 } }, "AUTO"),
-                        React.createElement("button", { onClick: function () { deleteTask(t.id); }, style: { background: "transparent", border: "none", color: "#C0BAB2", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: "0 2px" } }, "\u00D7")));
-                }),
-                tasks.filter(function (t) { return t.done; }).length > 0 && (React.createElement("div", { style: { marginTop: 12 } },
-                    React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#7B7569", textTransform: "uppercase", letterSpacing: .7, marginBottom: 6 } }, "Fuldf\u00F8rte"),
-                    tasks.filter(function (t) { return t.done; }).map(function (t) {
-                        return (React.createElement("div", { key: t.id, style: { display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 7, marginBottom: 4, opacity: .6 } },
-                            React.createElement("input", { type: "checkbox", checked: true, onChange: function () { toggleTask(t.id); }, style: { width: 16, height: 16, cursor: "pointer", accentColor: "#3D6B50" } }),
-                            React.createElement("span", { style: { flex: 1, fontSize: 12, color: "#7B7569", textDecoration: "line-through" } }, t.text),
-                            React.createElement("button", { onClick: function () { deleteTask(t.id); }, style: { background: "transparent", border: "none", color: "#C0BAB2", cursor: "pointer", fontSize: 13, lineHeight: 1 } }, "\u00D7")));
-                    }))))),
-            tab === "noter" && (React.createElement("div", null,
-                React.createElement("textarea", { value: notes, onChange: function (e) { setNotes(e.target.value); }, placeholder: "Skriv noter om klassen...", rows: 10, style: { width: "100%", padding: "12px", border: "1px solid #E2DDD6", borderRadius: 7, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none", lineHeight: 1.7, boxSizing: "border-box" } }),
-                React.createElement("button", { onClick: saveNotes, style: { marginTop: 8, padding: "8px 18px", background: "#152035", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "Gem noter"))),
-            tab === "info" && (React.createElement("div", null,
-                React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#7B7569", textTransform: "uppercase", letterSpacing: .7, marginBottom: 10 } }, "Klasse info"),
-                [["Skole", school.name], ["By", school.city], ["Elever", cls.students || 0], ["Produkter", (cls.products || []).join(", ") || "—"], ["Ordrer", cls.orders || 0], ["Omsætning", (cls.rev || 0).toLocaleString("da-DK") + " kr"]].map(function (row) {
-                    return (React.createElement("div", { key: row[0], style: { display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F0EDE8" } },
-                        React.createElement("span", { style: { fontSize: 12, color: "#7B7569" } }, row[0]),
-                        React.createElement("span", { style: { fontSize: 12, fontWeight: 600, color: "#1A1814" } }, row[1])));
-                }),
-                React.createElement("div", { style: { marginTop: 16, padding: "12px", background: "#F5F2EE", borderRadius: 7, fontSize: 12, color: "#7B7569", fontStyle: "italic" } }, "\uD83D\uDCAC Kommunikation for denne klasse vises under \"Kommunikation\" i menuen"))))));
+    function taskColor(t) {
+        if (t.status === "done")
+            return { bg: "#F0EDE8", color: "#7B7569", dot: "#3D6B50" };
+        if (t.deadline && t.deadline < today)
+            return { bg: "#FAE8E6", color: "#A0392A", dot: "#A0392A" };
+        if (t.deadline && t.deadline <= new Date(Date.now() + 3 * 864e5).toISOString().split("T")[0])
+            return { bg: "#F5EDD8", color: "#B8892A", dot: "#B8892A" };
+        return { bg: "#F8F6F2", color: "#1A1814", dot: "#1A4A7A" };
+    }
+    var openTasks = tasks.filter(function (t) { return t.status !== "done"; });
+    var doneTasks = tasks.filter(function (t) { return t.status === "done"; });
+    return (React.createElement("div", { style: { position: "fixed", top: 0, right: 0, bottom: 0, width: "min(460px,100vw)", background: "#fff",
+            boxShadow: "-8px 0 32px rgba(0,0,0,.12)", zIndex: 200, display: "flex", flexDirection: "column" } },
+        React.createElement("style", null, "@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}.__panel{animation:slideIn .22s ease}"),
+        showMob && React.createElement(MobileStageSheet, { stages:stages, currentId:item.stage, onSelect:function(id){changeStage(id);setShowMob(false);}, onClose:function(){setShowMob(false);} }),
+        React.createElement("div", { className: "__panel", style: { display: "contents" } },
+            React.createElement("div", { style: { background: stg.bg, borderBottom: "2px solid " + stg.border, padding: "18px 20px 14px", flexShrink: 0 } },
+                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 } },
+                    React.createElement("div", null,
+                        React.createElement("div", { style: { fontSize: 19, fontWeight: 800, color: "#1A1814", fontFamily: "'Playfair Display',serif" } }, item.label),
+                        React.createElement("div", { style: { fontSize: 12, color: "#7B7569", marginTop: 2 } },
+                            item.school.city,
+                            " \u00B7 ",
+                            classes.length,
+                            " klasser")),
+                    React.createElement("button", { onClick: onClose, style: { background: "rgba(0,0,0,.07)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", fontSize: 18, color: "#7B7569", display: "flex", alignItems: "center", justifyContent: "center" } }, "\u00D7")),
+                React.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap" } }, stages.map(function (s) {
+                    var on = item.stage === s.id;
+                    return (React.createElement("button", { key: s.id, onClick: function () { changeStage(s.id); }, style: { padding: "4px 10px", borderRadius: 20, border: "1px solid " + (on ? s.color : s.border),
+                            background: on ? s.color : "transparent", color: on ? "#fff" : s.color,
+                            fontSize: 11, fontWeight: on ? 700 : 500, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" } }, s.label));
+                }))),
+            React.createElement("div", { style: { display: "flex", borderBottom: "1px solid #E2DDD6", background: "#fff", flexShrink: 0 } }, [["opgaver", "✅ Opgaver" + (openTasks.length > 0 ? " (" + openTasks.length + ")" : "")], ["klasser", "🎓 Klasser (" + classes.length + ")"], ["kalender", "📅 Kalender"]].map(function (t) {
+                var on = tab === t[0];
+                return (React.createElement("button", { key: t[0], onClick: function () { setTab(t[0]); }, style: { flex: 1, padding: "10px 6px", border: "none", borderBottom: "2px solid " + (on ? "#152035" : "transparent"),
+                        background: "transparent", color: on ? "#152035" : "#7B7569", fontSize: 12, fontWeight: on ? 700 : 400, cursor: "pointer", fontFamily: "inherit" } }, t[1]));
+            })),
+            React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "16px 20px" } },
+                tab === "opgaver" && (React.createElement("div", null,
+                    React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 14, alignItems: "center" } },
+                        React.createElement("input", { value: newTask, onChange: function (e) { setNewTask(e.target.value); }, onKeyDown: function (e) { if (e.key === "Enter")
+                                addTask(); }, placeholder: "Ny opgave...", style: { flex: 1, padding: "8px 11px", border: "1px solid #E2DDD6", borderRadius: 6, fontSize: 13, fontFamily: "inherit", outline: "none" } }),
+                        React.createElement("input", { type: "date", value: newDeadline, onChange: function (e) { setNewDeadline(e.target.value); }, style: { width: 130, padding: "8px 8px", border: "1px solid #E2DDD6", borderRadius: 6, fontSize: 12, fontFamily: "inherit", outline: "none" } }),
+                        React.createElement("button", { onClick: addTask, disabled: !newTask.trim(), style: { padding: "8px 13px", background: newTask.trim() ? "#152035" : "#E2DDD6", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 700, cursor: "pointer" } }, "+")),
+                    tasks.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: "32px 0", color: "#7B7569" } },
+                        React.createElement("div", { style: { fontSize: 32, marginBottom: 8 } }, "\u2705"),
+                        React.createElement("div", { style: { fontSize: 13, fontWeight: 600 } }, "Ingen opgaver")),
+                    openTasks.map(function (t) {
+                        var tc = taskColor(t);
+                        var overdueFlag = t.deadline && t.deadline < today && t.status !== "done";
+                        return (React.createElement("div", { key: t.id, style: { display: "flex", alignItems: "center", gap: 9, padding: "10px 12px", background: tc.bg, borderRadius: 7, marginBottom: 6, border: "1px solid " + (overdueFlag ? "#F0C0BB" : "#E2DDD6") } },
+                            React.createElement("div", { onClick: function () { cycleStatus(t.id); }, style: { width: 18, height: 18, borderRadius: "50%", border: "2px solid " + tc.dot, background: t.status === "inprogress" ? tc.dot : "transparent", cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" } }, t.status === "inprogress" && React.createElement("div", { style: { width: 6, height: 6, borderRadius: "50%", background: "#fff" } })),
+                            React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+                                React.createElement("div", { style: { fontSize: 13, color: tc.color, fontWeight: 600, textDecoration: t.status === "done" ? "line-through" : "none" } }, t.text),
+                                React.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 2 } },
+                                    t.deadline && React.createElement("span", { style: { fontSize: 10, color: overdueFlag ? "#A0392A" : tc.dot, fontWeight: 600 } },
+                                        overdueFlag ? "⚠️ " : "📅 ",
+                                        fmtDate(t.deadline)),
+                                    t.auto && React.createElement("span", { style: { fontSize: 9, background: "#E8EFF7", color: "#1A4A7A", padding: "1px 5px", borderRadius: 8, fontWeight: 700 } }, "AUTO"),
+                                    React.createElement("span", { style: { fontSize: 10, color: "#7B7569" } }, t.status === "open" ? "Ikke startet" : t.status === "inprogress" ? "I gang" : "Faerdig"))),
+                            React.createElement("button", { onClick: function () { deleteTask(t.id); }, style: { background: "transparent", border: "none", color: "#C0BAB2", cursor: "pointer", fontSize: 15, padding: "0 2px", flexShrink: 0 } }, "\u00D7")));
+                    }),
+                    doneTasks.length > 0 && (React.createElement("div", { style: { marginTop: 12, opacity: .65 } },
+                        React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#7B7569", textTransform: "uppercase", letterSpacing: .7, marginBottom: 6 } },
+                            "Faerdige (",
+                            doneTasks.length,
+                            ")"),
+                        doneTasks.map(function (t) {
+                            return (React.createElement("div", { key: t.id, style: { display: "flex", alignItems: "center", gap: 9, padding: "7px 12px", borderRadius: 6, marginBottom: 4 } },
+                                React.createElement("div", { onClick: function () { cycleStatus(t.id); }, style: { width: 18, height: 18, borderRadius: "50%", border: "2px solid #3D6B50", background: "#3D6B50", cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" } },
+                                    React.createElement("span", { style: { color: "#fff", fontSize: 10, fontWeight: 700 } }, "\u2713")),
+                                React.createElement("span", { style: { flex: 1, fontSize: 12, color: "#7B7569", textDecoration: "line-through" } }, t.text),
+                                React.createElement("button", { onClick: function () { deleteTask(t.id); }, style: { background: "transparent", border: "none", color: "#C0BAB2", cursor: "pointer", fontSize: 14 } }, "\u00D7")));
+                        }))))),
+                tab === "klasser" && (React.createElement("div", null,
+                    classes.map(function (cls) {
+                        var hasRepr = !!(cls.repr1);
+                        return (React.createElement("div", { key: cls.id, style: { background: "#FAFAF8", borderRadius: 8, padding: "12px 14px", marginBottom: 8, border: "1px solid #E2DDD6" } },
+                            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 } },
+                                React.createElement("div", { style: { fontWeight: 700, fontSize: 14, color: "#1A1814" } }, cls.name),
+                                hasRepr
+                                    ? React.createElement("span", { style: { fontSize: 10, background: "#E4EFE9", color: "#3D6B50", fontWeight: 700, padding: "2px 7px", borderRadius: 10 } },
+                                        "\u2713 ",
+                                        cls.repr1.name.split(" ")[0])
+                                    : React.createElement("span", { style: { fontSize: 10, background: "#FAE8E6", color: "#A0392A", fontWeight: 700, padding: "2px 7px", borderRadius: 10 } }, "Ingen repr.")),
+                            React.createElement("div", { style: { display: "flex", gap: 12, fontSize: 11, color: "#7B7569" } },
+                                React.createElement("span", null,
+                                    cls.students || 0,
+                                    " elever"),
+                                React.createElement("span", null, (cls.products || []).join(", ") || "—"),
+                                cls.rev > 0 && React.createElement("span", { style: { color: "#3D6B50", fontWeight: 600 } },
+                                    (cls.rev || 0).toLocaleString("da-DK"),
+                                    " kr")),
+                            cls.repr1 && cls.repr1.phone && (React.createElement("a", { href: "tel:" + cls.repr1.phone, style: { display: "inline-block", marginTop: 6, fontSize: 11, color: "#1A4A7A", fontWeight: 600, textDecoration: "none" } },
+                                "\uD83D\uDCDE ",
+                                cls.repr1.name))));
+                    }),
+                    classes.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: "32px 0", color: "#7B7569", fontSize: 12 } }, "Ingen klasser registreret"))),
+                tab === "kalender" && (function () {
+                    var allTasksWithDates = tasks.filter(function (t) { return t.deadline && t.status !== "done"; });
+                    allTasksWithDates.sort(function (a, b) { return a.deadline.localeCompare(b.deadline); });
+                    return (React.createElement("div", null,
+                        React.createElement("div", { style: { fontSize: 12, color: "#7B7569", marginBottom: 12 } }, "Kommende deadlines"),
+                        allTasksWithDates.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: "32px 0", color: "#7B7569", fontSize: 12 } }, "Ingen planlagte deadlines"),
+                        allTasksWithDates.map(function (t) {
+                            var overdueFlag = t.deadline < today;
+                            var dotColor = overdueFlag ? "#A0392A" : t.deadline <= new Date(Date.now() + 3 * 864e5).toISOString().split("T")[0] ? "#B8892A" : "#1A4A7A";
+                            return (React.createElement("div", { key: t.id, style: { display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 0", borderBottom: "1px solid #F0EDE8" } },
+                                React.createElement("div", { style: { textAlign: "center", width: 38, flexShrink: 0, background: overdueFlag ? "#FAE8E6" : "#F5F2EE", borderRadius: 7, padding: "4px 0" } },
+                                    React.createElement("div", { style: { fontSize: 16, fontWeight: 800, color: dotColor } }, t.deadline.split("-")[2]),
+                                    React.createElement("div", { style: { fontSize: 9, color: dotColor, textTransform: "uppercase" } }, ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"][parseInt(t.deadline.split("-")[1]) - 1])),
+                                React.createElement("div", { style: { flex: 1 } },
+                                    React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: "#1A1814" } }, t.text),
+                                    overdueFlag && React.createElement("div", { style: { fontSize: 10, color: "#A0392A", fontWeight: 600, marginTop: 2 } }, "Overskredet"))));
+                        })));
+                })()))));
 }
-// ─── PIPELINE + OPGAVER (UNIFIED) ────────────────────────────────────────────
+// ─── PIPELINE STAGE SETTINGS MODAL ───────────────────────────────────────────
+function PipeStageSettings(_a) {
+    var stages = _a.stages, setStages = _a.setStages, onClose = _a.onClose;
+    var sn = useState("");
+    var newLabel = sn[0];
+    var setNewLabel = sn[1];
+    function addStage() { if (!newLabel.trim())
+        return; setStages(function (p) { return p.concat([{ id: "s" + Date.now(), label: newLabel.trim(), color: "#7B7569", bg: "#F5F2EE", border: "#E2DDD6" }]); }); setNewLabel(""); }
+    function removeStage(id) { setStages(function (p) { return p.filter(function (s) { return s.id !== id; }); }); }
+    function renameStage(id, label) { setStages(function (p) { return p.map(function (s) { return s.id === id ? Object.assign({}, s, { label: label }) : s; }); }); }
+    return (React.createElement("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 } },
+        React.createElement("div", { style: { background: "#fff", borderRadius: 12, width: "100%", maxWidth: 420, boxShadow: "0 24px 64px rgba(0,0,0,.22)" } },
+            React.createElement("div", { style: { padding: "18px 22px", borderBottom: "1px solid #E2DDD6", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: "#1A1814" } }, "Pipeline stages"),
+                React.createElement("button", { onClick: onClose, style: { background: "transparent", border: "none", fontSize: 20, cursor: "pointer", color: "#7B7569" } }, "\u00D7")),
+            React.createElement("div", { style: { padding: "16px 22px", maxHeight: 360, overflowY: "auto" } },
+                stages.map(function (s, i) {
+                    return (React.createElement("div", { key: s.id, style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 } },
+                        React.createElement("div", { style: { width: 10, height: 10, borderRadius: "50%", background: s.color, flexShrink: 0 } }),
+                        React.createElement("input", { value: s.label, onChange: function (e) { renameStage(s.id, e.target.value); }, style: { flex: 1, padding: "7px 10px", border: "1px solid #E2DDD6", borderRadius: 5, fontSize: 13, fontFamily: "inherit", outline: "none" } }),
+                        React.createElement("button", { onClick: function () { removeStage(s.id); }, style: { background: "transparent", border: "none", color: "#C0BAB2", cursor: "pointer", fontSize: 15, padding: "0 4px" } }, "\u00D7")));
+                }),
+                React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } },
+                    React.createElement("input", { value: newLabel, onChange: function (e) { setNewLabel(e.target.value); }, onKeyDown: function (e) { if (e.key === "Enter")
+                            addStage(); }, placeholder: "Nyt trin...", style: { flex: 1, padding: "7px 10px", border: "1px dashed #E2DDD6", borderRadius: 5, fontSize: 13, fontFamily: "inherit", outline: "none" } }),
+                    React.createElement("button", { onClick: addStage, style: { padding: "7px 14px", background: "#152035", color: "#fff", border: "none", borderRadius: 5, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "+ Tilfoej"))),
+            React.createElement("div", { style: { padding: "12px 22px", borderTop: "1px solid #E2DDD6", textAlign: "right" } },
+                React.createElement("button", { onClick: onClose, style: { padding: "8px 20px", background: "#152035", color: "#fff", border: "none", borderRadius: 5, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "Gem og luk")))));
+}
+// ─── PIPELINE + OPGAVER (UNIFIED, SCHOOL/YEAR BASED) ─────────────────────────
 function PipelineOpgaver(_a) {
-    var user = _a.user, schools = _a.schools, setSchools = _a.setSchools, assignments = _a.assignments, staff = _a.staff, activity = _a.activity;
-    var isInternal = ["admin", "saelger", "internsalg"].includes(user.role);
+    var user = _a.user, schools = _a.schools, setSchools = _a.setSchools, assignments = _a.assignments, staff = _a.staff, activity = _a.activity, setActivity = _a.setActivity, setPosts = _a.setPosts, addToast = _a.addToast, navigateToPipe = _a.navigateToPipe, onNavigateDone = _a.onNavigateDone;
+    var isAdmin = user.role === "admin";
+    var sst = useLS('pipe_stages', INIT_PIPE_STAGES);
+    var stages = sst[0];
+    var setStages = sst[1];
+    var spi = useLS('pipe_items', {});
+    var pipeItems = spi[0];
+    var setPipeItems = spi[1];
     var ssel = useState(null);
-    var selCard = ssel[0];
-    var setSelCard = ssel[1];
-    var sfil = useState("all");
-    var filterStaff = sfil[0];
-    var setFilterStaff = sfil[1];
+    var selItem = ssel[0];
+    var setSelItem = ssel[1];
+    var ssm = useState(false);
+    var showSettings = ssm[0];
+    var setShowSettings = ssm[1];
+    var sdrag = useState(null);
+    var dragId = sdrag[0];
+    var setDragId = sdrag[1];
+    var sdov = useState(null);
+    var dragOver = sdov[0];
+    var setDragOver = sdov[1];
     var sfsc = useState("all");
     var filterSchool = sfsc[0];
     var setFilterSchool = sfsc[1];
-    var sdrag = useState(null);
-    var dragItem = sdrag[0];
-    var setDragItem = sdrag[1];
-    var sdover = useState(null);
-    var dragOver = sdover[0];
-    var setDragOver = sdover[1];
-    // Build flat list of all active classes with their pipeline stage
-    var allClasses = [];
-    schools.forEach(function (s) {
-        var mySchoolIds = user.role === "admin" ? true : (assignments[s.id] || []).includes(user.id);
-        if (!mySchoolIds)
-            return;
+    var sfst = useState("all");
+    var filterStatus = sfst[0];
+    var setFilterStatus = sfst[1];
+    var sfstaff = useState("all");
+    var filterStaff = sfstaff[0]; var setFilterStaff = sfstaff[1];
+    var sview = useState("kanban");
+    var view = sview[0];
+    var setView = sview[1];
+    var sshd = useState(false);
+    var showDone = sshd[0]; var setShowDone = sshd[1];
+    var sdoneq = useState("");
+    var doneQuery = sdoneq[0]; var setDoneQuery = sdoneq[1];
+    var today = new Date().toISOString().split("T")[0];
+    // Build school/cohort items from schools
+    var mySchoolIds = isAdmin ? schools.map(function (s) { return s.id; }) : schools.filter(function (s) { return (assignments[s.id] || []).includes(user.id); }).map(function (s) { return s.id; });
+    var baseItems = [];
+    schools.filter(function (s) { return mySchoolIds.includes(s.id); }).forEach(function (s) {
         s.cohorts.filter(function (c) { return c.status === "active"; }).forEach(function (c) {
-            (c.classes || []).forEach(function (cl) {
-                allClasses.push({
-                    cls: Object.assign({}, cl),
-                    school: s,
-                    cohortId: c.id,
-                    stage: cl.pipeStage || "ingenKontakt",
-                });
+            var key = s.id + "_" + c.id;
+            var stored = pipeItems[key] || {};
+            baseItems.push({
+                id: key, schoolId: s.id, cohortId: c.id,
+                label: s.name.split(" ")[0] + " " + c.year,
+                school: s, cohort: c,
+                stage: stored.stage || stages[0].id,
+                tasks: stored.tasks || [],
+                notes: stored.notes || "",
             });
         });
     });
     // Filter
-    var filtered = allClasses.filter(function (item) {
-        if (filterSchool !== "all" && item.school.id !== Number(filterSchool))
-            return false;
-        if (filterStaff !== "all") {
-            var asgn = (assignments[item.school.id] || []);
-            if (!asgn.includes(Number(filterStaff)))
-                return false;
-        }
+    var filtered = baseItems.filter(function (item) {
+        if (filterSchool !== "all" && item.schoolId !== Number(filterSchool)) return false;
+        if (filterStatus !== "all" && item.stage !== filterStatus) return false;
+        if (filterStaff !== "all" && !(assignments[item.schoolId]||[]).includes(Number(filterStaff))) return false;
         return true;
     });
-    function updateCls(clsId, schoolId, patch) {
-        setSchools(function (prev) {
-            return prev.map(function (s) {
-                if (s.id !== schoolId)
-                    return s;
-                return Object.assign({}, s, { cohorts: s.cohorts.map(function (c) {
-                        return Object.assign({}, c, { classes: (c.classes || []).map(function (cl) {
-                                if (cl.id !== clsId)
-                                    return cl;
-                                return Object.assign({}, cl, patch);
-                            }) });
-                    }) });
-            });
-        });
-        // Update selCard if open
-        if (selCard && selCard.cls.id === clsId) {
-            setSelCard(function (prev) { return prev ? Object.assign({}, prev, { cls: Object.assign({}, prev.cls, patch) }) : null; });
+    function updateItem(id, patch) {
+        setPipeItems(function (p) { var n = Object.assign({}, p); n[id] = Object.assign({}, n[id] || {}, patch); return n; });
+        if (selItem && selItem.id === id) {
+            setSelItem(function (prev) { return prev ? Object.assign({}, prev, patch) : null; });
         }
     }
-    function setStage(clsId, schoolId, stage) {
-        updateCls(clsId, schoolId, { pipeStage: stage });
-        if (selCard && selCard.cls.id === clsId) {
-            setSelCard(function (prev) { return prev ? Object.assign({}, prev, { stage: stage }) : null; });
+    function setStage(id, stageId) {
+        updateItem(id, { stage: stageId });
+        // Auto-sync: log to activity + kommunikation feed
+        var item = baseItems.find(function (i) { return i.id === id; });
+        var stg = stages.find(function (s) { return s.id === stageId; });
+        if (item && stg) {
+            var today = new Date().toISOString().split("T")[0];
+            var actTitle = item.label + " rykket til \"" + stg.label + "\"";
+            if (setActivity) {
+                setActivity(function (prev) { return [{ id: Date.now(), type: "note", title: actTitle, body: "Pipeline opdateret automatisk da stage ændredes.", schoolId: item.schoolId, createdBy: user.name, createdByIni: user.ini, createdById: user.id, assignedTo: user.id, status: "done", deadline: null, createdAt: today }].concat(prev); });
+            }
+            if (setPosts) {
+                setPosts(function (prev) { return [{ id: Date.now() + 1, type: "opdate", title: actTitle, body: "📌 Pipeline-trin ændret til: " + stg.label, schoolId: item.schoolId, author: user.name, authorIni: user.ini, authorRole: user.role, date: today, internal: true, pinned: false, reactions: {}, comments: [] }].concat(prev); });
+            }
         }
     }
-    // Drag handlers
-    function onDragStart(item) { setDragItem(item); }
-    function onDragOver(e, stageKey) { e.preventDefault(); setDragOver(stageKey); }
-    function onDrop(stageKey) {
-        if (dragItem && dragItem.stage !== stageKey) {
-            setStage(dragItem.cls.id, dragItem.school.id, stageKey);
+    // Drag & drop
+    function onDragStart(id) { setDragId(id); }
+    function onDrop(stageId) {
+        if (dragId) {
+            var item = baseItems.find(function (i) { return i.id === dragId; });
+            if (item && item.stage !== stageId)
+                setStage(dragId, stageId);
         }
-        setDragItem(null);
+        setDragId(null);
         setDragOver(null);
     }
-    // "Mine opgaver" widget data
-    var today = new Date().toISOString().split("T")[0];
+    // Mine opgaver data
     var allTasks = [];
-    allClasses.forEach(function (item) {
-        (item.cls.pipeOpgaver || []).filter(function (t) { return !t.done; }).forEach(function (t) {
-            allTasks.push(Object.assign({}, t, { clsName: item.cls.name, schoolName: item.school.name, clsId: item.cls.id, schoolId: item.school.id }));
+    baseItems.forEach(function (item) {
+        (item.tasks || []).filter(function (t) { return t.status !== "done"; }).forEach(function (t) {
+            allTasks.push(Object.assign({}, t, { itemLabel: item.label, itemId: item.id }));
         });
     });
-    var overdueTasks = allTasks.filter(function (t) { return t.createdAt && t.createdAt < today; }).slice(0, 3);
-    var todayTasks = allTasks.filter(function (t) { return t.createdAt === today; }).slice(0, 3);
-    var mySchools = schools.filter(function (s) { return user.role === "admin" || (assignments[s.id] || []).includes(user.id); });
+    var overdueTasks = allTasks.filter(function (t) { return t.deadline && t.deadline < today; });
+    var todayTasks = allTasks.filter(function (t) { return t.deadline === today; });
+    var upcomingTasks = allTasks.filter(function (t) { return t.deadline && t.deadline > today; }).slice(0, 4);
+    var allDoneTasks = [];
+    baseItems.forEach(function(item){
+        (item.tasks||[]).filter(function(t){return t.status==="done";}).forEach(function(t){
+            allDoneTasks.push(Object.assign({},t,{itemLabel:item.label,itemId:item.id,schoolName:item.school.name,schoolId:item.schoolId}));
+        });
+    });
+    var filteredDone = doneQuery.trim()
+        ? allDoneTasks.filter(function(t){ return t.text.toLowerCase().includes(doneQuery.toLowerCase())||t.schoolName.toLowerCase().includes(doneQuery.toLowerCase()); })
+        : allDoneTasks;
+    var mySchools = schools.filter(function (s) { return mySchoolIds.includes(s.id); });
     var internalStaff = (staff || []).filter(function (s) { return s.role !== "repr"; });
+    useEffect(function(){
+        if(navigateToPipe&&navigateToPipe.schoolId){
+            var found=baseItems.find(function(i){return i.schoolId===navigateToPipe.schoolId;});
+            if(found) setSelItem(found);
+            if(onNavigateDone) onNavigateDone();
+        }
+    },[navigateToPipe]);
     return (React.createElement("div", { style: { display: "flex", height: "calc(100vh - 56px)", overflow: "hidden", background: "#F8F6F2" } },
-        React.createElement("div", { style: { width: 220, background: "#FFFFFF", borderRight: "1px solid #E2DDD6", overflowY: "auto", flexShrink: 0, display: "flex", flexDirection: "column" } },
-            React.createElement("div", { style: { padding: "16px 14px", borderBottom: "1px solid #E2DDD6" } },
-                React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: "#1A1814", marginBottom: 2 } }, "Mine opgaver"),
-                React.createElement("div", { style: { fontSize: 11, color: "#7B7569" } },
-                    allTasks.length,
-                    " \u00E5bne i alt")),
-            overdueTasks.length > 0 && (React.createElement("div", { style: { padding: "10px 14px", borderBottom: "1px solid #E2DDD6" } },
-                React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#A0392A", textTransform: "uppercase", letterSpacing: .7, marginBottom: 6 } }, "\u26A0\uFE0F Forsinkede"),
-                overdueTasks.map(function (t) {
-                    return (React.createElement("div", { key: t.id, style: { padding: "6px 8px", background: "#FAE8E6", borderRadius: 5, marginBottom: 4, borderLeft: "3px solid #A0392A" } },
-                        React.createElement("div", { style: { fontSize: 11, fontWeight: 600, color: "#1A1814" } }, t.text.length > 28 ? t.text.substring(0, 28) + "..." : t.text),
-                        React.createElement("div", { style: { fontSize: 10, color: "#7B7569", marginTop: 1 } },
-                            t.clsName,
-                            " \u00B7 ",
-                            t.schoolName.split(" ")[0])));
-                }))),
-            todayTasks.length > 0 && (React.createElement("div", { style: { padding: "10px 14px", borderBottom: "1px solid #E2DDD6" } },
-                React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#B8892A", textTransform: "uppercase", letterSpacing: .7, marginBottom: 6 } }, "\uD83D\uDCC5 I dag"),
-                todayTasks.map(function (t) {
-                    return (React.createElement("div", { key: t.id, style: { padding: "6px 8px", background: "#F5EDD8", borderRadius: 5, marginBottom: 4, borderLeft: "3px solid #B8892A" } },
-                        React.createElement("div", { style: { fontSize: 11, fontWeight: 600, color: "#1A1814" } }, t.text.length > 28 ? t.text.substring(0, 28) + "..." : t.text),
-                        React.createElement("div", { style: { fontSize: 10, color: "#7B7569", marginTop: 1 } }, t.clsName)));
-                }))),
-            allTasks.length === 0 && (React.createElement("div", { style: { padding: "24px 14px", textAlign: "center", color: "#7B7569" } },
-                React.createElement("div", { style: { fontSize: 28, marginBottom: 6 } }, "\uD83C\uDF89"),
-                React.createElement("div", { style: { fontSize: 12, fontWeight: 600 } }, "Ingen opgaver"))),
-            React.createElement("div", { style: { padding: "12px 14px", marginTop: "auto", borderTop: "1px solid #E2DDD6" } },
-                React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: "#7B7569", textTransform: "uppercase", letterSpacing: .7, marginBottom: 6 } }, "Filter"),
-                React.createElement("select", { value: filterSchool, onChange: function (e) { setFilterSchool(e.target.value); }, style: { width: "100%", padding: "6px 8px", borderRadius: 4, border: "1px solid #E2DDD6", fontSize: 11, fontFamily: "inherit", marginBottom: 6, color: "#1A1814" } },
+        showSettings && isAdmin && React.createElement(PipeStageSettings, { stages: stages, setStages: setStages, onClose: function () { setShowSettings(false); } }),
+        React.createElement("div", { style: { width: 224, background: "#FFFFFF", borderRight: "1px solid #E2DDD6", display: "flex", flexDirection: "column", overflowY: "auto", flexShrink: 0 } },
+            React.createElement("div", { style: { padding: "14px 14px 10px", borderBottom: "1px solid #E2DDD6" } },
+                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
+                    React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: "#1A1814" } }, "Mine opgaver"),
+                    React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: overdueTasks.length > 0 ? "#A0392A" : allTasks.length > 0 ? "#B8892A" : "#7B7569", background: overdueTasks.length > 0 ? "#FAE8E6" : allTasks.length > 0 ? "#F5EDD8" : "#F5F2EE", padding: "2px 7px", borderRadius: 10 } }, allTasks.length)),
+                overdueTasks.length > 0 && (React.createElement("div", { style: { marginBottom: 10 } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, marginBottom: 5 } },
+                        React.createElement("div", { style: { width: 7, height: 7, borderRadius: "50%", background: "#A0392A" } }),
+                        React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#A0392A", textTransform: "uppercase", letterSpacing: .7 } },
+                            "Overskredet (",
+                            overdueTasks.length,
+                            ")")),
+                    overdueTasks.slice(0, 4).map(function (t) {
+                        var daysOver = Math.floor((new Date(today) - new Date(t.deadline)) / 864e5);
+                        return (React.createElement("div", { key: t.id, onClick: function () { var it = baseItems.find(function (i) { return i.id === t.itemId; }); if (it) setSelItem(it); }, style: { padding: "7px 9px", background: "#FAE8E6", borderRadius: 6, marginBottom: 4, cursor: "pointer", borderLeft: "3px solid #A0392A", border: "1px solid #F0C0BB", borderLeftWidth: 3 } },
+                            React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#A0392A", marginBottom: 2 } }, t.text.length > 28 ? t.text.substring(0, 28) + "…" : t.text),
+                            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                                React.createElement("div", { style: { fontSize: 10, color: "#7B7569" } }, t.itemLabel),
+                                React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#A0392A", background: "#fff", borderRadius: 8, padding: "1px 5px" } },
+                                    daysOver === 1 ? "1 dag" : daysOver + " dage")))); }))),
+                todayTasks.length > 0 && (React.createElement("div", { style: { marginBottom: 10 } },
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, marginBottom: 5 } },
+                        React.createElement("div", { style: { width: 7, height: 7, borderRadius: "50%", background: "#B8892A" } }),
+                        React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#B8892A", textTransform: "uppercase", letterSpacing: .7 } }, "I dag")),
+                    todayTasks.slice(0, 3).map(function (t) {
+                        return (React.createElement("div", { key: t.id, onClick: function () { var it = baseItems.find(function (i) { return i.id === t.itemId; }); if (it) setSelItem(it); }, style: { padding: "7px 9px", background: "#FDF6E8", borderRadius: 6, marginBottom: 4, cursor: "pointer", border: "1px solid #E8D09A", borderLeftWidth: 3, borderLeftColor: "#B8892A" } },
+                            React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: "#1A1814", marginBottom: 2 } }, t.text.length > 28 ? t.text.substring(0, 28) + "…" : t.text),
+                            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                                React.createElement("div", { style: { fontSize: 10, color: "#7B7569" } }, t.itemLabel),
+                                React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#B8892A", background: "#fff", borderRadius: 8, padding: "1px 5px" } }, "I dag")))); }))),
+                upcomingTasks.length > 0 && (React.createElement("div", null,
+                    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, marginBottom: 5 } },
+                        React.createElement("div", { style: { width: 7, height: 7, borderRadius: "50%", background: "#1A4A7A" } }),
+                        React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#1A4A7A", textTransform: "uppercase", letterSpacing: .7 } }, "Kommende")),
+                    upcomingTasks.map(function (t) {
+                        var daysLeft = Math.ceil((new Date(t.deadline) - new Date(today)) / 864e5);
+                        var soon = daysLeft <= 3;
+                        return (React.createElement("div", { key: t.id, onClick: function () { var it = baseItems.find(function (i) { return i.id === t.itemId; }); if (it) setSelItem(it); }, style: { padding: "7px 9px", background: soon ? "#FDF6E8" : "#EEF4FC", borderRadius: 6, marginBottom: 4, cursor: "pointer", border: "1px solid " + (soon ? "#E8D09A" : "#BDD0E8"), borderLeftWidth: 3, borderLeftColor: soon ? "#B8892A" : "#1A4A7A" } },
+                            React.createElement("div", { style: { fontSize: 11, fontWeight: 600, color: "#1A1814", marginBottom: 2 } }, t.text.length > 28 ? t.text.substring(0, 28) + "…" : t.text),
+                            React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+                                React.createElement("div", { style: { fontSize: 10, color: "#7B7569" } }, t.itemLabel),
+                                React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: soon ? "#B8892A" : "#1A4A7A", background: "#fff", borderRadius: 8, padding: "1px 5px" } },
+                                    fmtDate(t.deadline))))); }))),
+                allTasks.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: "12px 0", fontSize: 11, color: "#7B7569" } }, "Ingen aabne opgaver 🎉")),
+            React.createElement("div", { style: { padding: "12px 14px" } },
+                React.createElement("div", { style: { fontSize: 9, fontWeight: 700, color: "#7B7569", textTransform: "uppercase", letterSpacing: .7, marginBottom: 6 } }, "Filter"),
+                React.createElement("select", { value: filterSchool, onChange: function (e) { setFilterSchool(e.target.value); }, style: { width: "100%", padding: "6px 8px", borderRadius: 4, border: "1px solid #E2DDD6", fontSize: 11, fontFamily: "inherit", marginBottom: 6, color: "#1A1814", background: "#fff" } },
                     React.createElement("option", { value: "all" }, "Alle skoler"),
                     mySchools.map(function (s) { return React.createElement("option", { key: s.id, value: s.id }, s.name.split(" ")[0]); })),
-                user.role === "admin" && (React.createElement("select", { value: filterStaff, onChange: function (e) { setFilterStaff(e.target.value); }, style: { width: "100%", padding: "6px 8px", borderRadius: 4, border: "1px solid #E2DDD6", fontSize: 11, fontFamily: "inherit", color: "#1A1814" } },
-                    React.createElement("option", { value: "all" }, "Alle medarbejdere"),
-                    internalStaff.map(function (s) { return React.createElement("option", { key: s.id, value: s.id }, s.name); }))))),
-        React.createElement("div", { style: { flex: 1, overflowX: "auto", overflowY: "hidden", display: "flex", flexDirection: "column" } },
-            React.createElement("div", { style: { padding: "14px 20px 12px", borderBottom: "1px solid #E2DDD6", background: "#FFFFFF", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 } },
-                React.createElement("div", null,
-                    React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: "#1A1814", fontFamily: "'Playfair Display',serif" } }, "Pipeline & Opgaver"),
-                    React.createElement("div", { style: { fontSize: 11, color: "#7B7569", marginTop: 1 } },
-                        filtered.length,
-                        " klasser \u00B7 Tr\u00E6k kort for at \u00E6ndre status")),
-                React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } }, KLASS_PIPE_STAGES.map(function (s) {
-                    var cnt = filtered.filter(function (i) { return i.stage === s.key; }).length;
-                    return (React.createElement("div", { key: s.key, style: { textAlign: "center", padding: "4px 10px", borderRadius: 6, background: s.bg, border: "1px solid " + s.border } },
-                        React.createElement("div", { style: { fontSize: 14, fontWeight: 800, color: s.color } }, cnt),
-                        React.createElement("div", { style: { fontSize: 9, color: s.color, fontWeight: 600 } }, s.label.split(" ")[0])));
-                }))),
-            React.createElement("div", { style: { display: "flex", gap: 0, flex: 1, overflowY: "hidden", minWidth: 900 } }, KLASS_PIPE_STAGES.map(function (stg, idx) {
-                var colItems = filtered.filter(function (item) { return item.stage === stg.key; });
-                var isDragTarget = dragOver === stg.key;
-                return (React.createElement("div", { key: stg.key, onDragOver: function (e) { onDragOver(e, stg.key); }, onDrop: function () { onDrop(stg.key); }, onDragLeave: function () { setDragOver(null); }, style: { flex: 1, borderRight: idx < KLASS_PIPE_STAGES.length - 1 ? "1px solid #E2DDD6" : "none",
+                React.createElement("select", { value: filterStatus, onChange: function (e) { setFilterStatus(e.target.value); }, style: { width: "100%", padding: "6px 8px", borderRadius: 4, border: "1px solid #E2DDD6", fontSize: 11, fontFamily: "inherit", marginBottom:6, color: "#1A1814", background: "#fff" } },
+                    React.createElement("option", { value: "all" }, "Alle stages"),
+                    stages.map(function (s) { return React.createElement("option", { key: s.id, value: s.id }, s.label); })),
+                React.createElement("select", { value: filterStaff, onChange: function(e){setFilterStaff(e.target.value);}, style:{ width:"100%", padding:"6px 8px", borderRadius:4, border:"1px solid #E2DDD6", fontSize:11, fontFamily:"inherit", color:"#1A1814", background:"#fff" } },
+                    React.createElement("option",{value:"all"},"Alle medarbejdere"),
+                    internalStaff.map(function(s){return React.createElement("option",{key:s.id,value:s.id},s.name.split(" ")[0]);})))),
+        React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" } },
+            React.createElement("div", { style: { padding: "12px 20px", borderBottom: "1px solid #E2DDD6", background: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 } },
+                React.createElement("div",{style:{display:"flex",gap:0,border:"1px solid #E2DDD6",borderRadius:7,overflow:"hidden"}},React.createElement("button",{onClick:function(){setShowDone(false);},style:{padding:"7px 16px",border:"none",background:!showDone?NAVY:"transparent",color:!showDone?"#fff":MTD,fontSize:13,fontWeight:!showDone?600:400,cursor:"pointer",fontFamily:"inherit"}},"\u25C8 Pipeline"),React.createElement("button",{onClick:function(){setShowDone(true);},style:{padding:"7px 16px",border:"none",background:showDone?GREEN:"transparent",color:showDone?"#fff":MTD,fontSize:13,fontWeight:showDone?600:400,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}},"\u2705 Afsluttede",allDoneTasks.length>0&&React.createElement("span",{style:{background:showDone?"rgba(255,255,255,.25)":GBGN,color:showDone?"#fff":GREEN,borderRadius:10,fontSize:10,fontWeight:700,padding:"1px 6px"}},allDoneTasks.length))),
+                React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } },
+                    !showDone && React.createElement("div", { style: { display: "flex", gap: 5 } }, stages.map(function (s) {
+                        var cnt = filtered.filter(function (i) { return i.stage === s.id; }).length;
+                        if (cnt === 0)
+                            return null;
+                        return (React.createElement("div", { key: s.id, style: { textAlign: "center", padding: "3px 8px", borderRadius: 5, background: s.bg, border: "1px solid " + s.border } },
+                            React.createElement("span", { style: { fontSize: 13, fontWeight: 800, color: s.color } }, cnt),
+                            React.createElement("span", { style: { fontSize: 9, color: s.color, fontWeight: 600, marginLeft: 3 } }, s.label.split(" ")[0])));
+                    })),
+                    isAdmin && !showDone && React.createElement("button", { onClick: function () { setShowSettings(true); }, style: { padding: "6px 12px", border: "1px solid #E2DDD6", borderRadius: 5, background: "#fff", color: "#7B7569", fontSize: 12, cursor: "pointer", fontFamily: "inherit" } }, "\u2699 Stages"))),
+            !showDone && React.createElement("div", { style: { flex: 1, overflowX: "auto", overflowY: "hidden", display: "flex", minWidth: 0 } }, stages.map(function (stg, idx) {
+                var colItems = filtered.filter(function (item) { return item.stage === stg.id; });
+                var isDragTarget = dragOver === stg.id;
+                return (React.createElement("div", { key: stg.id, onDragOver: function (e) { e.preventDefault(); setDragOver(stg.id); }, onDrop: function () { onDrop(stg.id); }, onDragLeave: function () { setDragOver(null); }, style: { flex: 1, minWidth: 180, borderRight: idx < stages.length - 1 ? "1px solid #E2DDD6" : "none",
                         background: isDragTarget ? stg.bg : "#F8F6F2", transition: "background .2s",
-                        display: "flex", flexDirection: "column", minWidth: 160 } },
-                    React.createElement("div", { style: { padding: "12px 12px 8px", background: stg.bg, borderBottom: "2px solid " + stg.border, flexShrink: 0 } },
-                        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 2 } },
-                            React.createElement("span", { style: { fontSize: 14 } }, stg.icon),
-                            React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: stg.color, textTransform: "uppercase", letterSpacing: .5 } }, stg.label)),
-                        React.createElement("span", { style: { fontSize: 20, fontWeight: 800, color: stg.color } }, colItems.length)),
-                    React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "10px 10px" } },
+                        display: "flex", flexDirection: "column" } },
+                    React.createElement("div", { style: { padding: "10px 10px 7px", background: stg.bg, borderBottom: "2px solid " + stg.border, flexShrink: 0 } },
+                        React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: stg.color, textTransform: "uppercase", letterSpacing: .5, marginBottom: 1 } }, stg.label),
+                        React.createElement("div", { style: { fontSize: 18, fontWeight: 800, color: stg.color } }, colItems.length)),
+                    React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "8px" } },
                         colItems.map(function (item) {
-                            return (React.createElement("div", { key: item.cls.id, draggable: true, onDragStart: function () { onDragStart(item); }, onDragEnd: function () { setDragItem(null); setDragOver(null); } },
-                                React.createElement(KlasseKort, { cls: item.cls, school: item.school, stage: item.stage, onClick: function (cls, school, stage) { setSelCard({ cls: cls, school: school, stage: stage }); } })));
+                            return (React.createElement(SkoleKort, { key: item.id, item: item, stages: stages, onClick: function (it) { setSelItem(it); }, onDragStart: function () { onDragStart(item.id); } }));
                         }),
-                        colItems.length === 0 && (React.createElement("div", { style: { textAlign: "center", padding: "20px 8px", color: "#C0BAB2", fontSize: 11, border: "2px dashed " + (isDragTarget ? stg.border : "#E2DDD6"), borderRadius: 8, marginTop: 4, transition: "border .2s" } }, isDragTarget ? "Slip her" : "Tom")))));
+                        colItems.length === 0 && (React.createElement("div", { style: { textAlign: "center", padding: "18px 8px", color: "#C0BAB2", fontSize: 11,
+                                border: "2px dashed " + (isDragTarget ? stg.border : "#E2DDD6"), borderRadius: 8, marginTop: 2, transition: "all .2s" } }, isDragTarget ? "Slip her ↓" : "Tom")))));
             }))),
-        selCard && (React.createElement(React.Fragment, null,
-            React.createElement("div", { onClick: function () { setSelCard(null); }, style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.2)", zIndex: 199 } }),
-            React.createElement(KlassePanel, { cls: selCard.cls, school: selCard.school, stage: selCard.stage, onClose: function () { setSelCard(null); }, onStageChange: setStage, onUpdateCls: updateCls })))));
+        showDone && React.createElement("div", { style:{ flex:1, overflowY:"auto", padding:"24px" } },
+            React.createElement("div",{style:{marginBottom:16,display:"flex",alignItems:"center",gap:12}},
+                React.createElement("input",{value:doneQuery,onChange:function(e){setDoneQuery(e.target.value);},placeholder:"S\u00F8g i afsluttede opg...",style:{flex:1,padding:"9px 14px",borderRadius:7,border:"1px solid "+BRD,fontSize:13,fontFamily:"inherit",outline:"none"}}),
+                doneQuery&&React.createElement("button",{onClick:function(){setDoneQuery("");},style:{background:"transparent",border:"none",color:MTD,fontSize:18,cursor:"pointer",padding:"0 4px"}},"\u00D7")),
+            filteredDone.length===0&&React.createElement("div",{style:{textAlign:"center",padding:"60px 0",color:MTD}},
+                React.createElement("div",{style:{fontSize:48,marginBottom:12}},"\u2705"),
+                React.createElement("div",{style:{fontSize:15,fontWeight:600,color:TXT,marginBottom:4}},doneQuery?"Ingen resultater":"Ingen afsluttede opgaver endnu"),
+                React.createElement("div",{style:{fontSize:12}},doneQuery?"Pr\u00F8v et andet s\u00F8geord":"Afslut en opgave i pipeline-panelet")),
+            filteredDone.length>0&&React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:10}},
+                filteredDone.map(function(t){
+                    var item=baseItems.find(function(i){return i.id===t.itemId;});
+                    var stg=item?stages.find(function(s){return s.id===item.stage;})||stages[0]:stages[0];
+                    return React.createElement("div",{key:t.id,style:{background:SFC,borderRadius:9,padding:"14px 16px",border:"1px solid "+BRD,display:"flex",gap:12,alignItems:"flex-start"}},
+                        React.createElement("div",{style:{width:22,height:22,borderRadius:"50%",background:GREEN,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}},
+                            React.createElement("span",{style:{color:"#fff",fontSize:11,fontWeight:700}},"\u2713")),
+                        React.createElement("div",{style:{flex:1,minWidth:0}},
+                            React.createElement("div",{style:{fontSize:13,fontWeight:600,color:TXT,textDecoration:"line-through",opacity:.7,marginBottom:4}},t.text),
+                            React.createElement("div",{style:{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}},
+                                React.createElement("span",{style:{fontSize:11,background:stg.bg,color:stg.color,padding:"2px 8px",borderRadius:10,fontWeight:600,border:"1px solid "+stg.border}},t.itemLabel),
+                                t.auto&&React.createElement("span",{style:{fontSize:9,background:BLUEBG,color:BLUE,padding:"1px 5px",borderRadius:8,fontWeight:700}},"AUTO"),
+                                t.createdAt&&React.createElement("span",{style:{fontSize:10,color:MTD}},
+                                    "Oprettet "+fmtDate(t.createdAt))),
+                            React.createElement("button",{onClick:function(){
+                                if(item) onUpdateItem(item.id,{tasks:(item.tasks||[]).map(function(tk){return tk.id===t.id?Object.assign({},tk,{status:"open"}):tk;})});
+                            },style:{marginTop:8,fontSize:10,color:NAVY,fontWeight:600,background:"transparent",border:"1px solid "+BRD,borderRadius:5,padding:"3px 8px",cursor:"pointer",fontFamily:"inherit"}},"\u21A9 Genaktiver")));
+                }))),
+        selItem && (React.createElement(React.Fragment, null,
+            React.createElement("div", { onClick: function () { setSelItem(null); }, style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.18)", zIndex: 199 } }),
+            React.createElement(SkolePipePanel, { item: selItem, stages: stages, onClose: function () { setSelItem(null); }, onStageChange: setStage, onUpdateItem: updateItem, addToast: addToast })))));
 }
 function Kommunikation(_a) {
     var user = _a.user, schools = _a.schools, assignments = _a.assignments, staff = _a.staff, activity = _a.activity, setActivity = _a.setActivity, posts = _a.posts, setPosts = _a.setPosts, schoolPipeline = _a.schoolPipeline, setSchoolPipeline = _a.setSchoolPipeline;
     var scp = useState(null);
     var contactPerson = scp[0];
     var setContactPerson = scp[1];
-    var sno = useState(false);
-    var showNewOpgave = sno[0];
-    var setShowNewOpgave = sno[1];
     var isInternal = ["admin", "saelger", "internsalg"].includes(user.role);
     var stab = useState("feed");
     var tab = stab[0];
@@ -837,8 +1009,11 @@ function Kommunikation(_a) {
     var selPipeStage = sps[0];
     var setSelPipeStage = sps[1];
     var snp = useState(false);
-    var showNewPost = snp[0];
-    var setShowNewPost = snp[1];
+    var showNewPost = snp[0]; var setShowNewPost = snp[1];
+    var sno = useState(false);
+    var showNewOpgave = sno[0]; var setShowNewOpgave = sno[1];
+    var stab2 = useState("feed");
+    var mainTab = stab2[0]; var setMainTab = stab2[1];
     var mySchoolIds = user.role === "repr" ? [user.schoolId] : user.role === "admin" ? schools.map(function (s) { return s.id; }) : schools.filter(function (s) { return (assignments[s.id] || []).includes(user.id); }).map(function (s) { return s.id; });
     var mySchools = schools.filter(function (s) { return mySchoolIds.includes(s.id); });
     var visiblePosts = (posts || []).filter(function (p) {
@@ -886,10 +1061,8 @@ function Kommunikation(_a) {
     var selSchoolObj = selSchool ? schools.find(function (s) { return s.id === selSchool; }) : null;
     var schoolPipeStage = selSchool && schoolPipeline[selSchool] ? schoolPipeline[selSchool].stage : null;
     var schoolPipeObj = schoolPipeStage ? CLS_PIPE_STAGES.find(function (s) { return s.key === schoolPipeStage; }) : null;
-    function fmtDate(d) { if (!d)
-        return ""; var m = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]; var p = d.split("-"); return p[2] + " " + m[parseInt(p[1]) - 1]; }
     return (React.createElement("div", { style: { display: "flex", height: "calc(100vh - 56px)", overflow: "hidden" } },
-        showNewOpgave && React.createElement(OpgaveModal, { schools: schools, staff: staff || [], user: user, onSave: function (data) { setActivity(function (p) { return [Object.assign({ id: Date.now() }, data)].concat(p); }); setShowNewOpgave(false); }, onClose: function () { setShowNewOpgave(false); } }),
+        showNewOpgave && React.createElement(NyOpgaveModal, { schools: schools, staff: staff || [], user: user, onSave: function (data) { setActivity(function (p) { return [Object.assign({ id: Date.now(), type:"task", status:"open", createdAt:new Date().toISOString().split("T")[0], createdBy:user.name, createdByIni:user.ini, createdById:user.id }, data)].concat(p); }); setShowNewOpgave(false); }, onClose: function () { setShowNewOpgave(false); } }),
         showNewPost && React.createElement(NyPostModal, { schools: mySchools, user: user, onSave: function (data) { setPosts(function (p) { return [Object.assign({ id: Date.now() }, data)].concat(p); }); }, onClose: function () { setShowNewPost(false); } }),
         contactPerson && React.createElement(StaffContactModal, { person: contactPerson, onClose: function () { setContactPerson(null); } }),
         React.createElement("div", { style: { width: 224, background: SFC, borderRight: "1px solid " + BRD, display: "flex", flexDirection: "column", overflowY: "auto", flexShrink: 0 } },
@@ -954,7 +1127,6 @@ function Kommunikation(_a) {
             React.createElement("div", { style: { padding: "16px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid " + BRD, paddingBottom: 14, background: SFC, position: "sticky", top: 0, zIndex: 10 } },
                 React.createElement("div", { style: { display: "flex", gap: 0, border: "1px solid " + BRD, borderRadius: 7, overflow: "hidden" } },
                     React.createElement("button", { onClick: function () { setTab("feed"); }, style: { padding: "7px 18px", border: "none", background: tab === "feed" ? NAVY : "transparent", color: tab === "feed" ? "#fff" : MTD, fontSize: 13, fontWeight: tab === "feed" ? 600 : 400, cursor: "pointer", fontFamily: "inherit" } }, "\uD83D\uDCF0 Feed"),
-                    isInternal && React.createElement("button", { onClick: function () { setTab("pipeline"); }, style: { padding: "7px 18px", border: "none", background: tab === "pipeline" ? NAVY : "transparent", color: tab === "pipeline" ? "#fff" : MTD, fontSize: 13, fontWeight: tab === "pipeline" ? 600 : 400, cursor: "pointer", fontFamily: "inherit" } }, "\uD83D\uDD00 Pipeline"),
                     isInternal && React.createElement("button", { onClick: function () { setTab("opgaver"); }, style: { padding: "7px 18px", border: "none", background: tab === "opgaver" ? NAVY : "transparent", color: tab === "opgaver" ? "#fff" : MTD, fontSize: 13, fontWeight: tab === "opgaver" ? 600 : 400, cursor: "pointer", fontFamily: "inherit" } }, "\u2705 Opgaver")),
                 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
                     tab === "feed" && selPipeStage && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 20, background: (CLS_PIPE_STAGES.find(function (s) { return s.key === selPipeStage; }) || {}).bg || BLUEBG, border: "1px solid " + (CLS_PIPE_STAGES.find(function (s) { return s.key === selPipeStage; }) || {}).color || BLUE } },
@@ -962,8 +1134,8 @@ function Kommunikation(_a) {
                             "Filtrer: ",
                             (CLS_PIPE_STAGES.find(function (s) { return s.key === selPipeStage; }) || {}).label || ""),
                         React.createElement("button", { onClick: function () { setSelPipeStage(null); }, style: { background: "transparent", border: "none", cursor: "pointer", color: MTD, fontSize: 13, lineHeight: 1, padding: 0 } }, "\u00D7"))),
-                    isInternal && tab === "feed" && React.createElement("button", { onClick: function () { setShowNewPost(true); }, style: { padding: "7px 16px", borderRadius: 6, border: "none", background: NAVY, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "+ Nyt opslag"),
-                    isInternal && tab === "opgaver" && React.createElement("button", { onClick: function () { setShowNewOpgave(true); }, style: { padding: "7px 16px", borderRadius: 6, border: "none", background: NAVY, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "+ Ny opgave"),
+                    mainTab === "feed" && isInternal && React.createElement("button", { onClick: function () { setShowNewPost(true); }, style: { padding: "7px 16px", borderRadius: 6, border: "none", background: NAVY, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "+ Nyt opslag"),
+                    mainTab === "opgaver" && isInternal && React.createElement("button", { onClick: function () { setShowNewOpgave(true); }, style: { padding: "7px 16px", borderRadius: 6, border: "none", background: GREEN, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "+ Ny opgave"),
                     user.role === "repr" && React.createElement("button", { onClick: function () { setShowNewPost(true); }, style: { padding: "7px 16px", borderRadius: 6, border: "none", background: PURP, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "\u2709\uFE0F Skriv til saelger"))),
             React.createElement("div", { style: { padding: "16px 24px 40px" } },
                 selSchoolObj && isInternal && schoolPipeObj && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, background: schoolPipeObj.bg, border: "1px solid " + schoolPipeObj.color + "60", borderRadius: 8, padding: "10px 14px", marginBottom: 14 } },
@@ -974,87 +1146,43 @@ function Kommunikation(_a) {
                             " \u00B7 Pipeline: ",
                             schoolPipeObj.label),
                         React.createElement("div", { style: { fontSize: 11, color: MTD } }, "Klik pipeline-fanen for at aendre trin")))),
-                tab === "feed" && (React.createElement("div", null, sortedPosts.length === 0 ? (React.createElement("div", { style: { textAlign: "center", padding: "60px 0", color: MTD } },
+                mainTab === "feed" && (React.createElement("div", null, sortedPosts.length === 0 ? (React.createElement("div", { style: { textAlign: "center", padding: "60px 0", color: MTD } },
                     React.createElement("div", { style: { fontSize: 40, marginBottom: 12 } }, "\uD83D\uDCED"),
                     React.createElement("div", { style: { fontSize: 15, fontWeight: 600, color: TXT, marginBottom: 4 } }, "Ingen opslag"),
                     React.createElement("div", { style: { fontSize: 12 } }, "Tilpas filtrene til venstre eller opret et nyt opslag"))) : sortedPosts.map(function (post) {
                     return (React.createElement(FeedPost, { key: post.id, post: post, user: user, schools: schools, onTogglePin: togglePin, onAddComment: addComment, onReact: addReaction }));
+                }))))),
+        mainTab === "opgaver" && isInternal && (React.createElement("div", { style:{position:"absolute",top:130,left:0,right:0,bottom:0,overflowY:"auto",padding:"0 24px 40px"} },
+            (activity||[]).filter(function(a){return a.type==="task"&&(user.role==="admin"||a.assignedTo===user.id);}).length===0
+                && React.createElement("div",{style:{textAlign:"center",padding:"60px 0",color:MTD}},
+                    React.createElement("div",{style:{fontSize:36,marginBottom:10}},"✅"),
+                    React.createElement("div",{style:{fontSize:14,fontWeight:600,color:TXT}},"Ingen opgaver"),
+                    React.createElement("div",{style:{fontSize:12,marginTop:4}},"Tryk '+ Ny opgave' for at oprette en")),
+            (activity||[]).filter(function(a){return a.type==="task"&&(user.role==="admin"||a.assignedTo===user.id);})
+                .sort(function(a,b){return (a.deadline||"9999").localeCompare(b.deadline||"9999");})
+                .map(function(task){
+                    var td=new Date().toISOString().split("T")[0];
+                    var ov=task.deadline&&task.deadline<td&&task.status!=="done";
+                    var sc=schools.find(function(s){return s.id===task.schoolId;});
+                    var asgn=(staff||[]).find(function(s){return s.id===task.assignedTo;});
+                    var cols={open:{c:RED,bg:REDBG},inprogress:{c:GOLD,bg:GOLDBG},done:{c:GREEN,bg:GBGN}};
+                    var col=cols[task.status]||cols.open;
+                    return React.createElement("div",{key:task.id,style:{background:SFC,border:"1px solid "+(ov?RED+"60":BRD),borderRadius:9,padding:"12px 16px",marginBottom:8,borderLeft:"4px solid "+(ov?RED:col.c)}},
+                        React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}},
+                            React.createElement("div",{style:{fontSize:13,fontWeight:700,color:TXT,flex:1,marginRight:8}},task.title),
+                            React.createElement("span",{style:{fontSize:10,fontWeight:700,color:col.c,background:col.bg,padding:"2px 8px",borderRadius:10}},task.status==="open"?"Åben":task.status==="inprogress"?"I gang":"Færdig")),
+                        task.body&&React.createElement("div",{style:{fontSize:12,color:MTD,marginBottom:6,lineHeight:1.5}},task.body),
+                        React.createElement("div",{style:{display:"flex",gap:12,flexWrap:"wrap",fontSize:11,color:MTD,marginBottom:8}},
+                            sc&&React.createElement("span",null,"🏫 "+sc.name),
+                            asgn&&React.createElement("span",null,"👤 "+asgn.name),
+                            task.deadline&&React.createElement("span",{style:{color:ov?RED:MTD,fontWeight:ov?700:400}},(ov?"⚠️ Overskredet: ":"📅 ")+task.deadline)),
+                        React.createElement("div",{style:{display:"flex",gap:6}},
+                            ["open","inprogress","done"].map(function(st){
+                                var c2=cols[st]; var on=task.status===st;
+                                return React.createElement("button",{key:st,onClick:function(){setActivity(function(p){return p.map(function(a){return a.id===task.id?Object.assign({},a,{status:st}):a;});});},style:{padding:"3px 10px",borderRadius:5,border:"1px solid "+(on?c2.c:BRD),background:on?c2.bg:"transparent",color:on?c2.c:MTD,fontSize:10,fontWeight:on?700:400,cursor:"pointer",fontFamily:"inherit"}},
+                                    st==="open"?"Åben":st==="inprogress"?"I gang":"Færdig");
+                            })));
                 }))),
-                tab === "opgaver" && isInternal && (React.createElement("div", null, (function () {
-                    var today = new Date().toISOString().split("T")[0];
-                    var myTasks = (activity || []).filter(function (a) {
-                        return a.type === "task" && (user.role === "admin" || a.assignedTo === user.id || a.createdById === user.id);
-                    });
-                    var filtered = selSchool ? myTasks.filter(function (t) { return t.schoolId === selSchool; }) : myTasks;
-                    var open = filtered.filter(function (t) { return t.status === "open"; });
-                    var inprog = filtered.filter(function (t) { return t.status === "inprogress"; });
-                    var done = filtered.filter(function (t) { return t.status === "done"; });
-                    function fmtDate(d) { if (!d)
-                        return ""; var m = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]; var p = d.split("-"); return p[2] + " " + m[parseInt(p[1]) - 1]; }
-                    function TaskCard(props) {
-                        var t = props.t;
-                        var overdue = t.deadline && t.deadline < today && t.status !== "done";
-                        var sc = schools.find(function (s) { return s.id === t.schoolId; });
-                        var assignee = (staff || []).find(function (s) { return s.id === t.assignedTo; });
-                        return (React.createElement("div", { style: { background: SFC, borderRadius: 9, marginBottom: 8, border: "1px solid " + (overdue ? RED + "60" : BRD), overflow: "hidden" } },
-                            React.createElement("div", { style: { display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px" } },
-                                React.createElement("div", { style: { width: 3, alignSelf: "stretch", borderRadius: 2, background: overdue ? RED : t.status === "done" ? GREEN : t.status === "inprogress" ? GOLD : BLUE, flexShrink: 0 } }),
-                                React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-                                    React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: TXT, marginBottom: 4 } }, t.title),
-                                    t.body && React.createElement("div", { style: { fontSize: 12, color: MTD, marginBottom: 6, lineHeight: 1.5 } }, t.body),
-                                    React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } },
-                                        sc && React.createElement("span", { style: { fontSize: 11, color: MTD } },
-                                            "\uD83C\uDFEB ",
-                                            sc.name.split(" ")[0]),
-                                        assignee && React.createElement("span", { style: { fontSize: 11, color: MTD } },
-                                            "\uD83D\uDC64 ",
-                                            assignee.name),
-                                        t.deadline && React.createElement("span", { style: { fontSize: 11, color: overdue ? RED : MTD } }, overdue ? "⚠️ Overskredet" : "⏰ " + fmtDate(t.deadline)))),
-                                React.createElement("div", { style: { display: "flex", gap: 4, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" } },
-                                    ["open", "inprogress", "done"].map(function (s) {
-                                        var labels = { open: "Aaben", inprogress: "I gang", done: "Faerdig" };
-                                        var colors = { open: BLUE, inprogress: GOLD, done: GREEN };
-                                        var bgs = { open: BLUEBG, inprogress: GOLDBG, done: GBGN };
-                                        var on = t.status === s;
-                                        return (React.createElement("button", { key: s, onClick: function () { setActivity(function (p) { return p.map(function (a) { return a.id === t.id ? Object.assign({}, a, { status: s }) : a; }); }); }, style: { padding: "3px 9px", borderRadius: 12, border: "1px solid " + (on ? colors[s] : BRD), background: on ? bgs[s] : "transparent", color: on ? colors[s] : MTD, fontSize: 10, fontWeight: on ? 700 : 400, cursor: "pointer", fontFamily: "inherit" } }, labels[s]));
-                                    }),
-                                    React.createElement("button", { onClick: function () { setActivity(function (p) { return p.filter(function (a) { return a.id !== t.id; }); }); }, style: { padding: "3px 7px", borderRadius: 12, border: "1px solid " + BRD, background: "transparent", color: RED, fontSize: 10, cursor: "pointer", fontFamily: "inherit" } }, "\u00D7")))));
-                    }
-                    if (filtered.length === 0)
-                        return React.createElement("div", { style: { textAlign: "center", padding: "60px 0", color: MTD } },
-                            React.createElement("div", { style: { fontSize: 36, marginBottom: 12 } }, "\u2705"),
-                            React.createElement("div", { style: { fontSize: 14, fontWeight: 600, color: TXT } }, "Ingen opgaver"),
-                            React.createElement("div", { style: { fontSize: 12, marginTop: 4 } }, "Opret en ny opgave med knappen ovenfor"));
-                    return (React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 } },
-                        React.createElement("div", null,
-                            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 10, padding: "7px 10px", background: BLUEBG, borderRadius: 6 } },
-                                React.createElement("span", { style: { fontSize: 12 } }, "\u25CB"),
-                                React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: BLUE } },
-                                    "Aaben (",
-                                    open.length,
-                                    ")")),
-                            open.map(function (t) { return React.createElement(TaskCard, { key: t.id, t: t }); }),
-                            open.length === 0 && React.createElement("div", { style: { fontSize: 11, color: MTD, textAlign: "center", padding: "12px 0" } }, "Ingen aabne")),
-                        React.createElement("div", null,
-                            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 10, padding: "7px 10px", background: GOLDBG, borderRadius: 6 } },
-                                React.createElement("span", { style: { fontSize: 12 } }, "\u25D1"),
-                                React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: GOLD } },
-                                    "I gang (",
-                                    inprog.length,
-                                    ")")),
-                            inprog.map(function (t) { return React.createElement(TaskCard, { key: t.id, t: t }); }),
-                            inprog.length === 0 && React.createElement("div", { style: { fontSize: 11, color: MTD, textAlign: "center", padding: "12px 0" } }, "Ingen i gang")),
-                        React.createElement("div", null,
-                            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 10, padding: "7px 10px", background: GBGN, borderRadius: 6 } },
-                                React.createElement("span", { style: { fontSize: 12 } }, "\u25CF"),
-                                React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: GREEN } },
-                                    "Faerdig (",
-                                    done.length,
-                                    ")")),
-                            done.map(function (t) { return React.createElement(TaskCard, { key: t.id, t: t }); }),
-                            done.length === 0 && React.createElement("div", { style: { fontSize: 11, color: MTD, textAlign: "center", padding: "12px 0" } }, "Ingen faerdig"))));
-                })())),
-                tab === "pipeline" && isInternal && (React.createElement(PipelineKanban, { schools: mySchools, assignments: assignments, staff: staff, schoolPipeline: schoolPipeline, setSchoolPipeline: setSchoolPipeline, onStageClick: handlePipeStageClick, selectedStage: selPipeStage })))),
         selSchoolObj && (React.createElement("div", { style: { width: 232, background: SFC, borderLeft: "1px solid " + BRD, overflowY: "auto", flexShrink: 0, padding: "16px 14px" } },
             React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: TXT, fontFamily: "'Playfair Display',serif", marginBottom: 2 } }, selSchoolObj.name),
             React.createElement("div", { style: { fontSize: 11, color: MTD, marginBottom: 12 } }, selSchoolObj.city),
@@ -1772,60 +1900,92 @@ function NyAargangModal(_a) {
 }
 //  NAV 
 var PAGES = {
-    admin: ["dashboard", "skoler", "pipeline", "kommunikation", "rapporter", "indstillinger", "guides"],
-    saelger: ["dashboard", "skoler", "pipeline", "kommunikation", "rapporter", "guides"],
-    internsalg: ["dashboard", "skoler", "pipeline", "kommunikation", "rapporter", "guides"],
+    admin: ["dashboard", "skoler", "pipeline", "kalender", "kommunikation", "rapporter", "indstillinger", "guides"],
+    saelger: ["dashboard", "skoler", "pipeline", "kalender", "kommunikation", "rapporter", "guides"],
+    internsalg: ["dashboard", "skoler", "pipeline", "kalender", "kommunikation", "rapporter", "guides"],
     repr: ["dashboard", "minskole", "kommunikation", "guides"],
 };
-var PLBL = { dashboard: "Dashboard", skoler: "Skoler", pipeline: "Pipeline", traditioner: "Traditioner", kommunikation: "Kommunikation", rapporter: "Rapporter", indstillinger: "Indstillinger", guides: "Guides", minskole: "Min skole" };
-var PICONS = { dashboard: "⊞", skoler: "⌂", pipeline: "◈", traditioner: "★", kommunikation: "✉", rapporter: "▦", indstillinger: "⚙", guides: "▤", minskole: "⌂" };
+var PLBL = { dashboard: "Dashboard", skoler: "Skoler", pipeline: "Pipeline", kalender: "Kalender", traditioner: "Traditioner", kommunikation: "Kommunikation", rapporter: "Rapporter", indstillinger: "Indstillinger", guides: "Guides", minskole: "Min skole" };
+var PICONS = { dashboard: "⊞", skoler: "⌂", pipeline: "◈", kalender: "📅", traditioner: "★", kommunikation: "✉", rapporter: "▦", indstillinger: "⚙", guides: "▤", minskole: "⌂" };
 function Sidebar(_a) {
-    var user = _a.user, page = _a.page, go = _a.go, logout = _a.logout, notifCount = _a.notifCount, sagCount = _a.sagCount, opgaveCount = _a.opgaveCount;
-    var items = PAGES[user.role];
-    return (React.createElement("aside", { style: { width: 216, minHeight: "100vh", background: NAVY, display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" } },
-        React.createElement("div", { style: { padding: "22px 20px 18px", borderBottom: "1px solid rgba(255,255,255,.07)" } },
-            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
-                React.createElement("div", { style: { width: 34, height: 34, background: GOLD, borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center" } },
-                    React.createElement("span", { style: { color: "#fff", fontWeight: 900, fontSize: 17, fontFamily: "'Playfair Display',serif" } }, "C")),
-                React.createElement("div", null,
-                    React.createElement("div", { style: { color: "#fff", fontWeight: 800, fontSize: 17, fontFamily: "'Playfair Display',serif", lineHeight: 1 } },
-                        "CLS",
-                        React.createElement("span", { style: { color: GOLD } }, "+")),
-                    React.createElement("div", { style: { color: "rgba(255,255,255,.3)", fontSize: 9, fontWeight: 600, letterSpacing: 1.1, textTransform: "uppercase", marginTop: 2 } }, "Sales OS")))),
-        React.createElement("nav", { style: { flex: 1, padding: "10px 10px", overflowY: "auto" } }, items.map(function (key) {
-            var on = page === key;
-            var cnt = key === "kommunikation" ? (notifCount + sagCount) : key === "indstillinger" ? opgaveCount : 0;
-            return (React.createElement("button", { key: key, onClick: function () { go(key); }, style: { width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 11px", borderRadius: 6, background: on ? "rgba(184,137,42,.16)" : "transparent", border: on ? "1px solid rgba(184,137,42,.32)" : "1px solid transparent", color: on ? GOLD : "rgba(255,255,255,.5)", fontWeight: on ? 600 : 400, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", marginBottom: 2, textAlign: "left" } },
-                React.createElement("span", { style: { fontSize: 14, opacity: .85 } }, PICONS[key]),
-                React.createElement("span", { style: { flex: 1 } }, PLBL[key]),
-                cnt > 0 && React.createElement("span", { style: { background: RED, color: "#fff", borderRadius: 10, fontSize: 10, fontWeight: 700, padding: "1px 6px", minWidth: 18, textAlign: "center" } }, cnt)));
-        })),
-        React.createElement("div", { style: { padding: "12px 10px", borderTop: "1px solid rgba(255,255,255,.07)" } },
-            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, padding: "8px 11px 10px" } },
-                React.createElement(Ini, { t: user.ini, s: 30, bg: NAVY2 }),
-                React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-                    React.createElement("div", { style: { color: "rgba(255,255,255,.88)", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, user.name),
-                    React.createElement("div", { style: { color: "rgba(255,255,255,.32)", fontSize: 11 } }, RLBL[user.role]))),
-            React.createElement("button", { onClick: logout, style: { width: "100%", padding: "7px", borderRadius: 5, background: "transparent", border: "1px solid rgba(255,255,255,.1)", color: "rgba(255,255,255,.38)", fontSize: 12, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" } }, "Log ud"))));
+    var user=_a.user,page=_a.page,go=_a.go,logout=_a.logout,notifCount=_a.notifCount,sagCount=_a.sagCount,opgaveCount=_a.opgaveCount,overdueTasks=_a.overdueTasks;
+    var items=PAGES[user.role];
+    var mainItems=items.filter(function(k){return ["dashboard","skoler","pipeline","kalender","kommunikation"].includes(k);});
+    var toolItems=items.filter(function(k){return ["rapporter","guides"].includes(k);});
+    var adminItems=items.filter(function(k){return ["indstillinger"].includes(k);});
+    function NavBtn(key){
+        var on=page===key;
+        var cnt=key==="kommunikation"?(notifCount+sagCount):key==="pipeline"&&overdueTasks>0?overdueTasks:0;
+        var urgent=key==="pipeline"&&overdueTasks>0;
+        return React.createElement("button",{key:key,onClick:function(){go(key);},
+            style:{width:"100%",display:"flex",alignItems:"center",gap:9,padding:"9px 11px",borderRadius:7,
+                background:on?"rgba(184,137,42,.16)":"transparent",
+                border:on?"1px solid rgba(184,137,42,.3)":"1px solid transparent",
+                color:on?GOLD:"rgba(255,255,255,.55)",fontWeight:on?600:400,fontSize:13,
+                cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginBottom:1,textAlign:"left",transition:"all .12s"},
+            onMouseEnter:function(e){if(!on)e.currentTarget.style.background="rgba(255,255,255,.06)";},
+            onMouseLeave:function(e){if(!on)e.currentTarget.style.background="transparent";}},
+            React.createElement("span",{style:{fontSize:15,width:18,textAlign:"center",opacity:.85}},PICONS[key]),
+            React.createElement("span",{style:{flex:1}},PLBL[key]),
+            cnt>0&&React.createElement("span",{style:{background:urgent?RED:"rgba(255,255,255,.2)",color:"#fff",borderRadius:10,fontSize:10,fontWeight:700,padding:"1px 6px",minWidth:18,textAlign:"center"}},cnt));
+    }
+    function GroupLabel(lbl){
+        return React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.22)",
+            textTransform:"uppercase",letterSpacing:1.3,padding:"14px 10px 5px"}},lbl);
+    }
+    return React.createElement("aside",{style:{width:218,minHeight:"100vh",background:NAVY,display:"flex",flexDirection:"column",flexShrink:0,position:"sticky",top:0,height:"100vh",borderRight:"1px solid rgba(255,255,255,.05)"}},
+        React.createElement("div",{style:{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.06)"}},
+            React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10}},
+                React.createElement("div",{style:{width:36,height:36,background:GOLD,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(184,137,42,.35)"}},
+                    React.createElement("span",{style:{color:"#fff",fontWeight:900,fontSize:18,fontFamily:"'Playfair Display',serif"}},"C")),
+                React.createElement("div",null,
+                    React.createElement("div",{style:{color:"#fff",fontWeight:800,fontSize:18,fontFamily:"'Playfair Display',serif",lineHeight:1.1}},
+                        "CLS",React.createElement("span",{style:{color:GOLD}},"+"),
+                        React.createElement("span",{style:{fontSize:10,color:"rgba(255,255,255,.3)",fontWeight:400,marginLeft:4}},"Sales OS"))))),
+        React.createElement("nav",{style:{flex:1,padding:"6px 8px",overflowY:"auto"}},
+            GroupLabel("Arbejde"),
+            mainItems.map(NavBtn),
+            toolItems.length>0&&GroupLabel("Analyse"),
+            toolItems.map(NavBtn),
+            adminItems.length>0&&GroupLabel("System"),
+            adminItems.map(NavBtn)),
+        React.createElement("div",{style:{padding:"10px 10px 14px",borderTop:"1px solid rgba(255,255,255,.06)"}},
+            React.createElement("div",{style:{display:"flex",alignItems:"center",gap:9,padding:"8px 10px",borderRadius:7,marginBottom:6,background:"rgba(255,255,255,.04)"}},
+                React.createElement(Ini,{t:user.ini,s:28,bg:user.role==="repr"?GREEN:NAVY2}),
+                React.createElement("div",{style:{flex:1,minWidth:0}},
+                    React.createElement("div",{style:{color:"rgba(255,255,255,.88)",fontSize:12,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},user.name.split(" ")[0]),
+                    React.createElement("div",{style:{color:"rgba(255,255,255,.3)",fontSize:10}},RLBL[user.role]))),
+            React.createElement("button",{onClick:logout,style:{width:"100%",padding:"7px",borderRadius:5,background:"transparent",border:"1px solid rgba(255,255,255,.08)",color:"rgba(255,255,255,.3)",fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"},
+                onMouseEnter:function(e){e.currentTarget.style.color="rgba(255,255,255,.7)";},
+                onMouseLeave:function(e){e.currentTarget.style.color="rgba(255,255,255,.3)";}},
+                "Log ud")));
 }
+
 function Topbar(_a) {
-    var page = _a.page, user = _a.user, onSearch = _a.onSearch, notifCount = _a.notifCount, sagCount = _a.sagCount;
-    var cnt = notifCount + sagCount;
-    return (React.createElement("div", { style: { height: 52, background: SFC, borderBottom: "1px solid " + BRD, display: "flex", alignItems: "center", padding: "0 28px", justifyContent: "space-between", flexShrink: 0, position: "sticky", top: 0, zIndex: 20 } },
-        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: MTD } },
-            React.createElement("span", null, "CLS+"),
-            React.createElement("span", { style: { color: BRD } }, "\u203A"),
-            React.createElement("span", { style: { color: TXT, fontWeight: 600 } }, PLBL[page])),
-        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
-            React.createElement("button", { onClick: onSearch, style: { display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 20, border: "1px solid " + BRD, background: "#F8F6F2", color: MTD, fontSize: 12, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" } },
-                "\uD83D\uDD0D S\u00F8g\u2026 ",
-                React.createElement("span", { style: { fontSize: 10, opacity: .6, background: "#E8E4DE", borderRadius: 3, padding: "1px 5px" } }, "\u2318K")),
-            cnt > 0 && React.createElement("div", { style: { background: RED, color: "#fff", borderRadius: 10, fontSize: 11, fontWeight: 700, padding: "2px 8px" } },
-                cnt,
-                " ny"),
-            React.createElement(Tag, null, RLBL[user.role]),
-            React.createElement(Ini, { t: user.ini, s: 28 }))));
+    var page=_a.page,user=_a.user,onSearch=_a.onSearch,overdueTasks=_a.overdueTasks,go=_a.go,onNotif=_a.onNotif,notifCount=_a.notifCount,onPdf=_a.onPdf;
+    return React.createElement("div",{style:{height:54,background:SFC,borderBottom:"1px solid "+BRD,display:"flex",alignItems:"center",padding:"0 24px",justifyContent:"space-between",flexShrink:0,position:"sticky",top:0,zIndex:20,gap:16}},
+        React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10,minWidth:0}},
+            React.createElement("div",{style:{fontSize:15,fontWeight:700,color:TXT,fontFamily:"'Playfair Display',serif",whiteSpace:"nowrap"}},PLBL[page]||""),
+            overdueTasks>0&&page!=="pipeline"&&React.createElement("button",{onClick:function(){if(go)go("pipeline");},style:{display:"flex",alignItems:"center",gap:4,padding:"3px 10px",borderRadius:20,border:"1px solid "+RED+"50",background:REDBG,color:RED,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s",flexShrink:0}},
+                "⚠️ "+overdueTasks+" overskredet")),
+        React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8}},
+            React.createElement("button",{onClick:onSearch,style:{display:"flex",alignItems:"center",gap:8,padding:"6px 14px",borderRadius:8,border:"1px solid "+BRD,background:"#F8F6F2",color:MTD,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"},
+                onMouseEnter:function(e){e.currentTarget.style.borderColor=NAVY;},
+                onMouseLeave:function(e){e.currentTarget.style.borderColor=BRD;}},
+                "🔍 Søg... ",
+                React.createElement("kbd",{style:{fontSize:9,opacity:.5,background:"#E8E4DE",borderRadius:3,padding:"1px 5px",fontFamily:"inherit"}},"⌘K")),
+            onPdf && React.createElement("button",{onClick:onPdf,title:"Eksporter PDF",style:{padding:"6px 12px",borderRadius:8,border:"1px solid "+BRD,background:"transparent",color:MTD,fontSize:13,cursor:"pointer",transition:"all .12s"},
+                onMouseEnter:function(e){e.currentTarget.style.background="#F8F6F2";},
+                onMouseLeave:function(e){e.currentTarget.style.background="transparent";}},"📄"),
+            onNotif && React.createElement("button",{onClick:onNotif,title:"Notifikationer",style:{position:"relative",padding:"6px 12px",borderRadius:8,border:"1px solid "+(notifCount>0?RED+"50":BRD),background:notifCount>0?REDBG:"transparent",color:notifCount>0?RED:MTD,fontSize:13,cursor:"pointer",transition:"all .12s"},
+                onMouseEnter:function(e){e.currentTarget.style.background=notifCount>0?REDBG:"#F8F6F2";},
+                onMouseLeave:function(e){e.currentTarget.style.background=notifCount>0?REDBG:"transparent";}},
+                "🔔",notifCount>0&&React.createElement("span",{style:{marginLeft:5,fontSize:10,fontWeight:700}},notifCount)),
+            React.createElement("div",{style:{display:"flex",alignItems:"center",gap:7,padding:"5px 11px",borderRadius:8,background:"#F5F2EE"}},
+                React.createElement(Ini,{t:user.ini,s:24,bg:user.role==="repr"?GREEN:NAVY}),
+                React.createElement("span",{style:{fontSize:12,fontWeight:600,color:TXT}},user.name.split(" ")[0]))));
 }
+
 function GlobalSearch(_a) {
     var onNavigate = _a.onNavigate, onClose = _a.onClose, schools = _a.schools;
     var sq = useState("");
@@ -1872,7 +2032,7 @@ function GlobalSearch(_a) {
 // DASHBOARD
 // ─────────────────────────────────────────────────────────────────────────────
 function Dashboard(_a) {
-    var user = _a.user, schools = _a.schools, events = _a.events, activity = _a.activity, assignments = _a.assignments, staff = _a.staff, pipeline = _a.pipeline;
+    var user = _a.user, schools = _a.schools, events = _a.events, activity = _a.activity, assignments = _a.assignments, staff = _a.staff, pipeline = _a.pipeline, onGoPage = _a.onGoPage, addToast = _a.addToast, overdueTasks = _a.overdueTasks;
     var isAdmin = user.role === "admin";
     var isRepr = user.role === "repr";
     var today = new Date().toISOString().split("T")[0];
@@ -1931,7 +2091,12 @@ function Dashboard(_a) {
                 mySchool ? mySchool.name : "",
                 " \u00B7 ",
                 myCls ? myCls.name : ""),
-            React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 14, marginBottom: 24 } },
+            React.createElement("div", { style: { display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" } },
+            React.createElement(QuickStatBar, { label: "Omsætning YTD", value: kr(totalRev), color: GREEN, bg: GBGN, icon: "💰", sub: "↑ vs. sidst år", onClick: onGoPage?function(){onGoPage("rapporter");}:undefined }),
+            React.createElement(QuickStatBar, { label: "Ordrer", value: totalOrders, color: NAVY, bg: BLUEBG, icon: "📦", sub: clsWithRepr+"/"+allClasses.length+" klasser aktive", onClick: onGoPage?function(){onGoPage("skoler");}:undefined }),
+            overdueTasks > 0 && React.createElement(QuickStatBar, { label: "Overskredet", value: overdueTasks, color: RED, bg: REDBG, icon: "🚨", sub: "opgaver · klik for at se", onClick: onGoPage?function(){onGoPage("pipeline");}:undefined }),
+            atRisk.length > 0 && React.createElement(QuickStatBar, { label: "Skoler i risiko", value: atRisk.length, color: GOLD, bg: GOLDBG, icon: "⚠️", sub: "kræver opfølgning", onClick: onGoPage?function(){onGoPage("skoler");}:undefined })),
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 14, marginBottom: 24 } },
                 React.createElement(KPI, { label: "Din klasse", value: myCls ? myCls.name : "—", sub: mySchool ? mySchool.name : "", icon: "\uD83C\uDF93" }),
                 React.createElement(KPI, { label: "Betalt", value: (myCls && myCls.orders) || 0, sub: "af " + (myCls ? myCls.students : 0) + " elever", icon: "\uD83D\uDCB3" }),
                 React.createElement(KPI, { label: "Mangler", value: myCls ? myCls.students - (myCls.orders || 0) : 0, icon: "\u23F3" }),
@@ -1949,8 +2114,6 @@ function Dashboard(_a) {
                         React.createElement(Tag, { c: (TC[ev.type] || { c: MTD }).c, bg: (TC[ev.type] || { bg: "#F0EDE8" }).bg, small: true }, (TC[ev.type] || { l: "Event" }).l)),
                     i < myEvts.length - 1 && React.createElement(Divider, null))); }))));
     }
-    function fmtDate(d) { if (!d)
-        return ""; var m = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]; var p = d.split("-"); return p[2] + " " + m[parseInt(p[1]) - 1]; }
     function kr(v) { return (v || 0).toLocaleString("da-DK") + " kr"; }
     return (React.createElement("div", { style: { padding: "24px 28px 40px", maxWidth: 1100, margin: "0 auto" } },
         React.createElement("div", { style: { marginBottom: 20 } },
@@ -2023,6 +2186,13 @@ function Dashboard(_a) {
                                     " kr")),
                             assigned.length > 0 && React.createElement(Ini, { t: assigned[0].ini, s: 24 })));
                     })),
+                overdueTasks.length > 0 && React.createElement(Card, { style:{ border:"2px solid "+RED, marginBottom:16, background:REDBG, cursor:"pointer" }, onClick:function(){if(onGoPage)onGoPage("pipeline");} },
+                    React.createElement("div",{style:{display:"flex",alignItems:"center",gap:12}},
+                        React.createElement("span",{style:{fontSize:28}},"🚨"),
+                        React.createElement("div",{style:{flex:1}},
+                            React.createElement("div",{style:{fontSize:14,fontWeight:700,color:RED}},overdueTasks.length+" overskredet"+(overdueTasks.length===1?" opgave":" opgaver")),
+                            React.createElement("div",{style:{fontSize:12,color:RED,opacity:.8}},"Klik for at se i Pipeline")),
+                        React.createElement("span",{style:{fontSize:18,color:RED}},"›"))),
                 atRisk.length > 0 && (React.createElement(Card, { style: { border: "1px solid " + RED + "40", marginBottom: 16 } },
                     React.createElement(STitle, { sub: "Skoler der kraever opfoelgning" },
                         "Skoler i risiko (",
@@ -2040,6 +2210,29 @@ function Dashboard(_a) {
                                     " mangler repr."))));
                     })))),
             React.createElement("div", null,
+                React.createElement(Card, { style:{ marginBottom:16 } },
+                    React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
+                        React.createElement(STitle,null,"📅 Denne uge"),
+                        onGoPage&&React.createElement("button",{onClick:function(){onGoPage("kalender");},style:{fontSize:12,color:NAVY,fontWeight:600,background:"transparent",border:"none",cursor:"pointer",fontFamily:"inherit"}},"Åbn kalender →")),
+                    (function(){
+                        var now=new Date(); var dow=now.getDay(); var diff=dow===0?6:dow-1;
+                        var mon=new Date(now); mon.setDate(now.getDate()-diff); mon.setHours(0,0,0,0);
+                        var sun=new Date(mon); sun.setDate(mon.getDate()+6);
+                        var fmt=function(d){return d.toISOString().split("T")[0];};
+                        var wk=(events||[]).filter(function(e){return e.date>=fmt(mon)&&e.date<=fmt(sun);}).sort(function(a,b){return a.date.localeCompare(b.date);});
+                        if(!wk.length) return React.createElement("div",{style:{fontSize:12,color:MTD,textAlign:"center",padding:"8px 0"}},"Ingen events denne uge");
+                        return React.createElement("div",null,wk.slice(0,5).map(function(ev){
+                            var tc2=TC[ev.type]||{c:MTD,bg:"#F0EDE8"};
+                            var mns=["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"];
+                            return React.createElement("div",{key:ev.id,style:{display:"flex",gap:10,alignItems:"center",padding:"6px 0",borderBottom:"1px solid "+BRD}},
+                                React.createElement("div",{style:{textAlign:"center",width:32,flexShrink:0,background:tc2.bg,borderRadius:5,padding:"3px 0"}},
+                                    React.createElement("div",{style:{fontSize:13,fontWeight:800,color:tc2.c}},ev.date.split("-")[2]),
+                                    React.createElement("div",{style:{fontSize:8,color:tc2.c,textTransform:"uppercase"}},mns[parseInt(ev.date.split("-")[1])-1])),
+                                React.createElement("div",{style:{flex:1,minWidth:0}},
+                                    React.createElement("div",{style:{fontSize:12,fontWeight:600,color:TXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},ev.title),
+                                    React.createElement("div",{style:{fontSize:11,color:MTD}},ev.school)));
+                        }));
+                    })()),
                 React.createElement(Card, { style: { marginBottom: 16 } },
                     React.createElement(STitle, { sub: myTasks.length + " aabne" }, "Opgaver"),
                     myTasks.length === 0 && React.createElement("div", { style: { fontSize: 12, color: MTD, textAlign: "center", padding: "12px 0" } }, "Ingen aabne opgaver \uD83C\uDF89"),
@@ -2748,7 +2941,7 @@ function Skoler(_a) {
     } setPipeModal(false); setPipeEdit(null); }
     function delPipeline(id) { setPipeline(function (p) { return p.filter(function (x) { return x.id !== id; }); }); showToast("Emne slettet"); }
     function addOpgave(data) { setOpgaver(function (p) { return p.concat([Object.assign({ id: Date.now() }, data)]); }); showToast("Opgave oprettet"); }
-    var TABS_ITEMS = [{ key: "skoler", label: "Skoler" }, { key: "kalender", label: "Kalender" + (sel && school ? " " + school.name.split(" ")[0] : "") }].concat(canPipeline ? [{ key: "pipeline", label: "Pipeline (" + filtPipeline.length + ")" }] : []);
+    var TABS_ITEMS = [{ key: "skoler", label: "Skoler" }, { key: "kalender", label: "Kalender" + (sel && school ? " " + school.name.split(" ")[0] : "") }];
     function getHistory(cls) { return school ? school.cohorts.map(function (co) { var m = co.classes.find(function (c) { return c.name === cls.name; }); return m ? Object.assign({ year: co.year, status: co.status }, m) : null; }).filter(Boolean).sort(function (a, b) { return b.year - a.year; }).slice(1) : []; }
     var today = new Date("2026-03-10");
     function daysTo(dateStr) { if (!dateStr)
@@ -3898,32 +4091,301 @@ function Indstillinger(_a) {
 }
 //  LOGIN 
 function Login(_a) {
-    var onLogin = _a.onLogin;
-    return (React.createElement("div", { style: { minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 } },
-        React.createElement("div", { style: { width: "100%", maxWidth: 440, background: SFC, borderRadius: 12, overflow: "hidden", boxShadow: "0 24px 80px rgba(21,32,53,.18)" } },
-            React.createElement("div", { style: { background: NAVY, padding: "32px 36px", textAlign: "center" } },
-                React.createElement("div", { style: { width: 52, height: 52, background: GOLD, borderRadius: 10, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 } },
-                    React.createElement("span", { style: { color: "#fff", fontWeight: 900, fontSize: 26, fontFamily: "'Playfair Display',serif" } }, "C")),
-                React.createElement("div", { style: { color: "#fff", fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display',serif" } },
-                    "CLS",
-                    React.createElement("span", { style: { color: GOLD } }, "+"),
-                    " Sales OS"),
-                React.createElement("div", { style: { color: "rgba(255,255,255,.4)", fontSize: 12, marginTop: 6 } }, "C.L. Seifert \u00B7 Kongelig Hofleverand\u00F8r")),
-            React.createElement("div", { style: { padding: "28px 36px" } },
-                React.createElement("div", { style: { fontSize: 14, fontWeight: 600, color: TXT, marginBottom: 16, textAlign: "center" } }, "Log ind som"),
-                React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } }, Object.entries(USERS).map(function (entry) {
-                    var k = entry[0];
-                    var v = entry[1];
-                    return (React.createElement("button", { key: k, onClick: function () { onLogin(v); }, style: { padding: "14px 12px", borderRadius: 8, border: "1.5px solid " + BRD, background: SFC, cursor: "pointer", textAlign: "center", fontFamily: "'DM Sans',sans-serif", transition: "all .15s" }, onMouseEnter: function (e) { e.currentTarget.style.borderColor = NAVY; e.currentTarget.style.background = "#F0EEE8"; }, onMouseLeave: function (e) { e.currentTarget.style.borderColor = BRD; e.currentTarget.style.background = SFC; } },
-                        React.createElement(Ini, { t: v.ini, s: 34, bg: k === "repr" ? GREEN : NAVY }),
-                        React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: TXT, marginTop: 8, fontFamily: "'Playfair Display',serif" } }, v.name.split(" ")[0]),
-                        React.createElement("div", { style: { fontSize: 11, color: MTD, marginTop: 2 } }, RLBL[v.role])));
-                })),
-                React.createElement("div", { style: { marginTop: 20, padding: "12px 16px", background: "#F8F6F2", borderRadius: 8, fontSize: 11, color: MTD, textAlign: "center", lineHeight: 1.7 } },
-                    "Demo-login \u00B7 Alle roller tilgaengelige for test",
-                    React.createElement("br", null),
-                    React.createElement("span", { style: { color: GREEN, fontWeight: 600 } }, "\u2713 GDPR-samtykke accepteres automatisk ved oprettelse af konto"))))));
+    var onLogin=_a.onLogin;
+    return React.createElement("div",{style:{minHeight:"100vh",background:"linear-gradient(160deg,#0d1927 0%,"+NAVY+" 60%,#1a2f4a 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"'DM Sans',sans-serif"}},
+        React.createElement("div",{style:{width:"100%",maxWidth:460}},
+            React.createElement("div",{style:{textAlign:"center",marginBottom:32}},
+                React.createElement("div",{style:{width:60,height:60,background:GOLD,borderRadius:14,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:16,boxShadow:"0 8px 24px rgba(184,137,42,.4)"}},
+                    React.createElement("span",{style:{color:"#fff",fontWeight:900,fontSize:30,fontFamily:"'Playfair Display',serif"}},"C")),
+                React.createElement("div",{style:{color:"#fff",fontWeight:800,fontSize:30,fontFamily:"'Playfair Display',serif",marginBottom:6}},
+                    "CLS",React.createElement("span",{style:{color:GOLD}},"+")," Sales OS"),
+                React.createElement("div",{style:{color:"rgba(255,255,255,.35)",fontSize:13,letterSpacing:.3}},"C.L. Seifert · Kongelig Hofleverandør")),
+            React.createElement("div",{style:{background:"rgba(255,255,255,.04)",borderRadius:14,padding:"28px",border:"1px solid rgba(255,255,255,.08)"}},
+                React.createElement("div",{style:{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.35)",marginBottom:16,textAlign:"center",textTransform:"uppercase",letterSpacing:.9}},"Vælg din profil"),
+                React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
+                    Object.entries(USERS).map(function(e){
+                        var k=e[0],v=e[1];
+                        var rc={admin:GOLD,saelger:BLUE,internsalg:PURP,repr:GREEN}[v.role]||NAVY;
+                        return React.createElement("button",{key:k,onClick:function(){onLogin(v);},
+                            style:{padding:"18px 12px",borderRadius:10,border:"1px solid rgba(255,255,255,.1)",background:"rgba(255,255,255,.05)",cursor:"pointer",textAlign:"center",fontFamily:"'DM Sans',sans-serif",transition:"all .18s"},
+                            onMouseEnter:function(e){e.currentTarget.style.background="rgba(255,255,255,.1)";e.currentTarget.style.borderColor=rc+"60";e.currentTarget.style.transform="translateY(-2px)";},
+                            onMouseLeave:function(e){e.currentTarget.style.background="rgba(255,255,255,.05)";e.currentTarget.style.borderColor="rgba(255,255,255,.1)";e.currentTarget.style.transform="none";}},
+                            React.createElement("div",{style:{width:44,height:44,borderRadius:"50%",background:rc,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 10px",fontSize:15,fontWeight:700,color:"#fff",boxShadow:"0 4px 14px "+rc+"40"}},v.ini),
+                            React.createElement("div",{style:{fontSize:13,fontWeight:700,color:"#fff",marginBottom:3}},v.name.split(" ")[0]),
+                            React.createElement("div",{style:{fontSize:10,color:"rgba(255,255,255,.35)",textTransform:"uppercase",letterSpacing:.5}},RLBL[v.role]));
+                    })),
+                React.createElement("div",{style:{marginTop:18,padding:"10px 14px",background:"rgba(255,255,255,.03)",borderRadius:8,fontSize:11,color:"rgba(255,255,255,.25)",textAlign:"center",lineHeight:1.7}},
+                    "Demo · Alle roller tilgængelige"))));
 }
+
+
+// ─── NOTIFIKATIONS CENTER ─────────────────────────────────────────────────────
+function NotifCenter(_a) {
+    var open=_a.open, onClose=_a.onClose, activity=_a.activity, posts=_a.posts,
+        schools=_a.schools, user=_a.user, setActivity=_a.setActivity, onGoPage=_a.onGoPage;
+    var today=todayStr();
+    if (!open) return null;
+
+    // Aggregate notifications: overdue tasks + new posts + upcoming deadlines
+    var items = [];
+
+    // 1. Overdue tasks
+    (activity||[]).filter(function(a){
+        return a.type==="task" && a.status!=="done" && isOverdue(a.deadline, a.status) &&
+               (user.role==="admin" || a.assignedTo===user.id);
+    }).forEach(function(a){
+        var sc = schools.find(function(s){return s.id===a.schoolId;});
+        items.push({ id:"ov_"+a.id, type:"overdue", icon:"🔴", color:RED, bg:REDBG,
+            title: a.title, sub: (sc?sc.name:"")+" · Frist var "+fmtDate(a.deadline),
+            time: a.deadline, actId: a.id, priority: 0 });
+    });
+
+    // 2. Tasks due today
+    (activity||[]).filter(function(a){
+        return a.type==="task" && a.status!=="done" && a.deadline===today &&
+               (user.role==="admin" || a.assignedTo===user.id);
+    }).forEach(function(a){
+        var sc = schools.find(function(s){return s.id===a.schoolId;});
+        items.push({ id:"td_"+a.id, type:"today", icon:"🟡", color:GOLD, bg:GOLDBG,
+            title: a.title, sub: (sc?sc.name:"")+" · Frist i dag", time: today, actId: a.id, priority: 1 });
+    });
+
+    // 3. Recent posts (last 3 days)
+    var threeDaysAgo = new Date(Date.now()-3*864e5).toISOString().split("T")[0];
+    (posts||[]).filter(function(p){
+        return p.date >= threeDaysAgo && !p.internal &&
+               (user.role==="admin" || (schools||[]).some(function(s){return s.id===p.schoolId;}));
+    }).slice(0,6).forEach(function(p){
+        var sc = schools.find(function(s){return s.id===p.schoolId;});
+        var icons = {opdate:"📢", mode:"🤝", aftale:"📋", note:"📝", reminder:"🔔"};
+        items.push({ id:"post_"+p.id, type:"post", icon:icons[p.type]||"📌", color:BLUE, bg:BLUEBG,
+            title: p.title||"Nyt opslag", sub: (sc?sc.name:"")+" · "+fmtDate(p.date),
+            time: p.date, priority: 2 });
+    });
+
+    // 4. Tasks due in next 3 days
+    var in3 = new Date(Date.now()+3*864e5).toISOString().split("T")[0];
+    (activity||[]).filter(function(a){
+        return a.type==="task" && a.status!=="done" && a.deadline>today && a.deadline<=in3 &&
+               (user.role==="admin" || a.assignedTo===user.id);
+    }).forEach(function(a){
+        var sc = schools.find(function(s){return s.id===a.schoolId;});
+        var diff = Math.ceil((new Date(a.deadline)-new Date(today))/864e5);
+        items.push({ id:"soon_"+a.id, type:"soon", icon:"🔵", color:NAVY, bg:BLUEBG,
+            title: a.title, sub: (sc?sc.name:"")+" · Om "+diff+" dag"+(diff===1?"":"e"), time: a.deadline, actId: a.id, priority: 3 });
+    });
+
+    items.sort(function(a,b){ return a.priority - b.priority || a.time.localeCompare(b.time); });
+
+    function markDone(actId) {
+        setActivity(function(p){ return p.map(function(a){ return a.id===actId?Object.assign({},a,{status:"done"}):a; }); });
+    }
+
+    return React.createElement(React.Fragment, null,
+        React.createElement("div", {onClick:onClose, style:{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",zIndex:800}}),
+        React.createElement("div", {style:{position:"fixed",top:0,right:0,bottom:0,width:"min(400px,100vw)",background:SFC,
+            zIndex:801,display:"flex",flexDirection:"column",boxShadow:"-8px 0 40px rgba(0,0,0,.16)",animation:"slideIn .22s ease"}},
+            React.createElement("div",{style:{padding:"18px 20px",borderBottom:"1px solid "+BRD,display:"flex",alignItems:"center",justifyContent:"space-between",background:NAVY}},
+                React.createElement("div",null,
+                    React.createElement("div",{style:{fontSize:16,fontWeight:700,color:"#fff",fontFamily:"'Playfair Display',serif"}},"🔔 Notifikationer"),
+                    React.createElement("div",{style:{fontSize:11,color:"rgba(255,255,255,.4)",marginTop:2}},items.length+" aktive")),
+                React.createElement("button",{onClick:onClose,style:{background:"rgba(255,255,255,.1)",border:"none",borderRadius:"50%",width:30,height:30,cursor:"pointer",fontSize:16,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center"}},"\u00D7")),
+            items.length===0
+                ? React.createElement("div",{style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:MTD}},
+                    React.createElement("div",{style:{fontSize:48,marginBottom:12}},"✅"),
+                    React.createElement("div",{style:{fontSize:15,fontWeight:600,color:TXT}},"Alt er i orden"),
+                    React.createElement("div",{style:{fontSize:12,marginTop:4}},"Ingen ventende notifikationer"))
+                : React.createElement("div",{style:{flex:1,overflowY:"auto",padding:"8px 0"}},
+                    // Group by type
+                    (function(){
+                        var groups = [
+                            {key:"overdue", label:"🔴 Overskredet", items:items.filter(function(i){return i.type==="overdue";})},
+                            {key:"today",   label:"🟡 Forfald i dag", items:items.filter(function(i){return i.type==="today";})},
+                            {key:"soon",    label:"🔵 Kommende", items:items.filter(function(i){return i.type==="soon";})},
+                            {key:"post",    label:"📢 Nye opslag", items:items.filter(function(i){return i.type==="post";})},
+                        ].filter(function(g){return g.items.length>0;});
+                        return groups.map(function(g){
+                            return React.createElement("div",{key:g.key},
+                                React.createElement("div",{style:{padding:"10px 20px 6px",fontSize:10,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.8}},g.label),
+                                g.items.map(function(item){
+                                    return React.createElement("div",{key:item.id,
+                                        style:{padding:"12px 20px",borderBottom:"1px solid "+BRD,display:"flex",gap:12,alignItems:"flex-start",background:"transparent",transition:"background .12s",cursor:"default"},
+                                        onMouseEnter:function(e){e.currentTarget.style.background="#F8F6F2";},
+                                        onMouseLeave:function(e){e.currentTarget.style.background="transparent";}},
+                                        React.createElement("div",{style:{width:8,height:8,borderRadius:"50%",background:item.color,flexShrink:0,marginTop:5}}),
+                                        React.createElement("div",{style:{flex:1,minWidth:0}},
+                                            React.createElement("div",{style:{fontSize:13,fontWeight:600,color:TXT,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},item.title),
+                                            React.createElement("div",{style:{fontSize:11,color:MTD}},item.sub)),
+                                        item.actId && React.createElement("button",{
+                                            onClick:function(){markDone(item.actId);},
+                                            style:{padding:"3px 9px",borderRadius:5,border:"1px solid "+BRD,background:"transparent",color:GREEN,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all .12s"},
+                                            onMouseEnter:function(e){e.currentTarget.style.background=GBGN;},
+                                            onMouseLeave:function(e){e.currentTarget.style.background="transparent";}},"✓ Udført"));
+                                }));
+                        });
+                    })()),
+            React.createElement("div",{style:{padding:"12px 20px",borderTop:"1px solid "+BRD,display:"flex",gap:8}},
+                onGoPage && React.createElement("button",{onClick:function(){onGoPage("pipeline");onClose();},
+                    style:{flex:1,padding:"9px",borderRadius:7,border:"none",background:NAVY,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}},"→ Åbn Pipeline"),
+                onGoPage && React.createElement("button",{onClick:function(){onGoPage("kalender");onClose();},
+                    style:{flex:1,padding:"9px",borderRadius:7,border:"1px solid "+BRD,background:"transparent",color:TXT,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}},"→ Kalender"))));
+}
+
+// ─── HURTIG-OPRET FLOATING BUTTON ─────────────────────────────────────────────
+function FloatingCreate(_a) {
+    var user=_a.user, schools=_a.schools, staff=_a.staff, activity=_a.activity,
+        setActivity=_a.setActivity, addToast=_a.addToast;
+    var so=useState(false); var open=so[0]; var setOpen=so[1];
+    var today=todayStr();
+    if (user.role==="repr") return null;
+
+    var quickActions = [
+        { icon:"✅", label:"Ny opgave",   color:GREEN,  bg:GBGN  },
+        { icon:"📝", label:"Ny note",     color:PURP,   bg:PURPBG},
+        { icon:"📅", label:"Nyt møde",    color:NAVY,   bg:BLUEBG},
+    ];
+
+    var sq=useState(null); var quickType=sq[0]; var setQuickType=sq[1];
+    var st=useState(""); var qtitle=st[0]; var setQtitle=st[1];
+    var sd=useState(""); var qdl=sd[0]; var setQdl=sd[1];
+    var ss=useState(""); var qschool=ss[0]; var setQschool=ss[1];
+
+    function save() {
+        if (!qtitle.trim()) return;
+        var typeMap={"Ny opgave":"task","Ny note":"note","Nyt møde":"meeting"};
+        var newItem = {
+            id:Date.now(), type:typeMap[quickType]||"task",
+            title:qtitle.trim(), body:"", deadline:qdl||null,
+            schoolId:qschool?Number(qschool):null,
+            createdBy:user.name, createdByIni:user.ini, createdById:user.id,
+            assignedTo:user.id, status:"open", createdAt:today
+        };
+        setActivity(function(p){return [newItem].concat(p);});
+        if (addToast) addToast({type:"ok", msg:"✓ "+quickType+" oprettet"});
+        setQuickType(null); setQtitle(""); setQdl(""); setQschool(""); setOpen(false);
+    }
+
+    return React.createElement("div",{style:{position:"fixed",bottom:28,right:28,zIndex:700}},
+        // Quick form popup
+        quickType && React.createElement("div",{style:{position:"absolute",bottom:70,right:0,width:300,background:SFC,borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,.18)",border:"1px solid "+BRD,overflow:"hidden",animation:"fadeIn .15s ease"}},
+            React.createElement("div",{style:{background:NAVY,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}},
+                React.createElement("div",{style:{fontSize:14,fontWeight:700,color:"#fff"}},"+ "+quickType),
+                React.createElement("button",{onClick:function(){setQuickType(null);},style:{background:"transparent",border:"none",color:"rgba(255,255,255,.6)",fontSize:18,cursor:"pointer",lineHeight:1}},"\u00D7")),
+            React.createElement("div",{style:{padding:"14px 16px"}},
+                React.createElement("input",{autoFocus:true,value:qtitle,onChange:function(e){setQtitle(e.target.value);},
+                    onKeyDown:function(e){if(e.key==="Enter")save();if(e.key==="Escape")setQuickType(null);},
+                    placeholder:"Titel...",
+                    style:{width:"100%",padding:"9px 12px",borderRadius:6,border:"1px solid "+BRD,fontSize:13,fontFamily:"inherit",outline:"none",marginBottom:8,boxSizing:"border-box"}}),
+                React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}},
+                    React.createElement("input",{type:"date",value:qdl,onChange:function(e){setQdl(e.target.value);},
+                        style:{padding:"7px 10px",borderRadius:6,border:"1px solid "+BRD,fontSize:12,fontFamily:"inherit",outline:"none"}}),
+                    React.createElement("select",{value:qschool,onChange:function(e){setQschool(e.target.value);},
+                        style:{padding:"7px 10px",borderRadius:6,border:"1px solid "+BRD,fontSize:12,fontFamily:"inherit",outline:"none",background:"#fff"}},
+                        React.createElement("option",{value:""},"Alle skoler"),
+                        (schools||[]).map(function(s){return React.createElement("option",{key:s.id,value:s.id},s.name.split(" ")[0]);}))),
+                React.createElement("button",{onClick:save,disabled:!qtitle.trim(),
+                    style:{width:"100%",padding:"9px",borderRadius:7,border:"none",background:qtitle.trim()?NAVY:BRD,color:"#fff",fontSize:13,fontWeight:600,cursor:qtitle.trim()?"pointer":"default",fontFamily:"inherit"}},
+                    "Opret "+quickType))),
+        // Speed dial menu
+        open && React.createElement("div",{style:{position:"absolute",bottom:70,right:0,display:"flex",flexDirection:"column",gap:8,alignItems:"flex-end"}},
+            quickActions.map(function(a){
+                return React.createElement("button",{key:a.label,onClick:function(){setQuickType(a.label);setOpen(false);},
+                    style:{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",borderRadius:24,background:SFC,border:"1px solid "+BRD,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600,color:TXT,boxShadow:"0 4px 16px rgba(0,0,0,.12)",whiteSpace:"nowrap",animation:"fadeIn .15s ease",transition:"all .12s"},
+                    onMouseEnter:function(e){e.currentTarget.style.background=a.bg;e.currentTarget.style.borderColor=a.color;},
+                    onMouseLeave:function(e){e.currentTarget.style.background=SFC;e.currentTarget.style.borderColor=BRD;}},
+                    React.createElement("span",{style:{fontSize:16}},a.icon),a.label);
+            })),
+        // Main FAB button
+        React.createElement("button",{onClick:function(){setOpen(!open);if(quickType)setQuickType(null);},
+            style:{width:52,height:52,borderRadius:"50%",background:open?NAVY:GOLD,border:"none",cursor:"pointer",
+                fontSize:22,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",
+                boxShadow:"0 4px 20px rgba(0,0,0,.2)",transition:"all .18s",transform:open?"rotate(45deg)":"rotate(0)"}},
+            "+"));
+}
+
+// ─── PDF EKSPORT ──────────────────────────────────────────────────────────────
+function PdfExport(_a) {
+    var user=_a.user, schools=_a.schools, pipeline=_a.pipeline, activity=_a.activity,
+        assignments=_a.assignments, staff=_a.staff, onClose=_a.onClose;
+    var sr=useState("pipeline"); var report=sr[0]; var setReport=sr[1];
+    var sf=useState("all"); var filterStaff=sf[0]; var setFilterStaff=sf[1];
+    var today=todayStr();
+    var saelgere=(staff||[]).filter(function(s){return s.role==="saelger"||s.role==="internsalg";});
+
+    function getSchools() {
+        if (filterStaff==="all") return schools;
+        return schools.filter(function(s){return (assignments[s.id]||[]).includes(Number(filterStaff));});
+    }
+
+    function printReport() {
+        var mySchools=getSchools();
+        var win=window.open("","_blank","width=900,height=700");
+        var content="";
+
+        if (report==="pipeline") {
+            var rows=mySchools.map(function(s){
+                var active=s.cohorts.find(function(c){return c.status==="active";});
+                var cls=(active&&active.classes)||[];
+                var rev=cls.reduce(function(a,c){return a+(c.rev||0);},0);
+                var repr=cls.filter(function(c){return c.repr1;}).length;
+                return "<tr><td>"+s.name+"</td><td>"+s.city+"</td><td>"+s.procesStatus+"</td><td>"+cls.length+"</td><td>"+repr+"/"+cls.length+"</td><td>"+rev.toLocaleString("da-DK")+" kr</td></tr>";
+            }).join("");
+            content="<h2>Pipeline Oversigt</h2><table border='1' cellpadding='8' style='border-collapse:collapse;width:100%;font-family:sans-serif;font-size:13px'><thead style='background:#152035;color:#fff'><tr><th>Skole</th><th>By</th><th>Status</th><th>Klasser</th><th>Repr.</th><th>Omsætning</th></tr></thead><tbody>"+rows+"</tbody></table>";
+        } else if (report==="opgaver") {
+            var tasks=(activity||[]).filter(function(a){return a.type==="task"&&a.status!=="done";}).sort(function(a,b){return (a.deadline||"9999").localeCompare(b.deadline||"9999");});
+            var rows=tasks.map(function(t){
+                var sc=schools.find(function(s){return s.id===t.schoolId;});
+                var asgn=(staff||[]).find(function(s){return s.id===t.assignedTo;});
+                var ov=t.deadline&&t.deadline<today?"style='background:#FAE8E6'":" ";
+                return "<tr "+ov+"><td>"+(t.deadline||"-")+"</td><td>"+t.title+"</td><td>"+(sc?sc.name:"-")+"</td><td>"+(asgn?asgn.name:"-")+"</td><td>"+t.status+"</td></tr>";
+            }).join("");
+            content="<h2>Åbne Opgaver</h2><table border='1' cellpadding='8' style='border-collapse:collapse;width:100%;font-family:sans-serif;font-size:13px'><thead style='background:#152035;color:#fff'><tr><th>Deadline</th><th>Opgave</th><th>Skole</th><th>Ansvarlig</th><th>Status</th></tr></thead><tbody>"+rows+"</tbody></table>";
+        } else if (report==="repr") {
+            var allCls=[];
+            mySchools.forEach(function(s){
+                var active=s.cohorts.find(function(c){return c.status==="active";});
+                if(active)(active.classes||[]).forEach(function(c){allCls.push(Object.assign({},c,{schoolName:s.name}));});
+            });
+            var rows=allCls.map(function(c){
+                var status=c.repr1?(c.repr1.active?"Aktiv repr.":"Inviteret"):"Mangler repr.";
+                var color=c.repr1?(c.repr1.active?"#E4EFE9":"#F5EDD8"):"#FAE8E6";
+                return "<tr style='background:"+color+"'><td>"+c.schoolName+"</td><td>"+c.name+"</td><td>"+(c.repr1?c.repr1.name:"-")+"</td><td>"+status+"</td><td>"+(c.orders||0)+"/"+(c.students||0)+"</td></tr>";
+            }).join("");
+            content="<h2>Repr. Oversigt</h2><table border='1' cellpadding='8' style='border-collapse:collapse;width:100%;font-family:sans-serif;font-size:13px'><thead style='background:#152035;color:#fff'><tr><th>Skole</th><th>Klasse</th><th>Repr.</th><th>Status</th><th>Bestillinger</th></tr></thead><tbody>"+rows+"</tbody></table>";
+        }
+
+        win.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>CLS+ Rapport</title><style>body{font-family:'Segoe UI',sans-serif;padding:32px;color:#1A1814}h1{color:#152035;border-bottom:2px solid #B8892A;padding-bottom:8px}h2{color:#152035;margin-top:24px}table{page-break-inside:auto}tr{page-break-inside:avoid}@media print{button{display:none}}</style></head><body><h1>CLS+ Sales OS &nbsp;<span style='font-size:14px;color:#7B7569'>"+today+"</span></h1>"+content+"<p style='margin-top:32px;font-size:11px;color:#7B7569'>Genereret: "+new Date().toLocaleString("da-DK")+" · C.L. Seifert</p><script>setTimeout(function(){window.print();},400);<\/script></body></html>");
+        win.document.close();
+    }
+
+    var reports=[{v:"pipeline",l:"📊 Pipeline & skoler"},{v:"opgaver",l:"✅ Åbne opgaver"},{v:"repr",l:"🎓 Repr. oversigt"}];
+
+    return React.createElement(Modal,{onClose:onClose,wide:true},
+        React.createElement("div",{style:{background:NAVY,padding:"16px 22px",display:"flex",alignItems:"center",gap:12}},
+            React.createElement("span",{style:{fontSize:22}},"📄"),
+            React.createElement("div",{style:{fontSize:16,fontWeight:700,color:"#fff",fontFamily:"'Playfair Display',serif"}},"Eksporter PDF-rapport")),
+        React.createElement("div",{style:{padding:"20px 22px"}},
+            React.createElement("div",{style:{marginBottom:14}},
+                React.createElement("div",{style:{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:8}},"Rapport type"),
+                React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+                    reports.map(function(r){
+                        var on=report===r.v;
+                        return React.createElement("button",{key:r.v,onClick:function(){setReport(r.v);},
+                            style:{padding:"9px 16px",borderRadius:8,border:"2px solid "+(on?NAVY:BRD),background:on?NAVY:"transparent",color:on?"#fff":TXT,fontSize:13,fontWeight:on?700:400,cursor:"pointer",fontFamily:"inherit"}},r.l);
+                    }))),
+            saelgere.length>0&&React.createElement("div",{style:{marginBottom:14}},
+                React.createElement("div",{style:{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:8}},"Filtrer på medarbejder"),
+                React.createElement("select",{value:filterStaff,onChange:function(e){setFilterStaff(e.target.value);},
+                    style:{width:"100%",padding:"9px 12px",borderRadius:6,border:"1px solid "+BRD,fontSize:13,fontFamily:"inherit",outline:"none",background:"#fff"}},
+                    React.createElement("option",{value:"all"},"Alle medarbejdere"),
+                    saelgere.map(function(s){return React.createElement("option",{key:s.id,value:s.id},s.name);}))),
+            React.createElement("div",{style:{background:"#F8F6F2",borderRadius:8,padding:"12px 16px",fontSize:12,color:MTD}},
+                "⚡ Åbner print-dialogen direkte i en ny fane — gem som PDF via din browser")),
+        React.createElement("div",{style:{padding:"12px 22px",borderTop:"1px solid "+BRD,display:"flex",gap:8,justifyContent:"flex-end"}},
+            React.createElement("button",{onClick:onClose,style:{padding:"9px 18px",borderRadius:6,border:"1px solid "+BRD,background:"transparent",color:MTD,fontSize:13,cursor:"pointer",fontFamily:"inherit"}},"Annuller"),
+            React.createElement("button",{onClick:printReport,style:{padding:"9px 20px",borderRadius:6,border:"none",background:NAVY,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}},"🖨 Udskriv / Gem PDF")));
+}
+
 //  APP 
 function App() {
     var su = useState(null);
@@ -3938,7 +4400,7 @@ function App() {
     var se = useState(EVENTS_INIT);
     var events = se[0];
     var setEvents = se[1];
-    var spl = useState(INIT_PIPELINE);
+    var spl = useLS('pipeline', INIT_PIPELINE);
     var pipeline = spl[0];
     var setPipeline = spl[1];
     var sps = useState(MOCK_PROD_STATUS);
@@ -3953,13 +4415,13 @@ function App() {
     var stm = useState(INIT_TEMPLATES);
     var templates = stm[0];
     var setTemplates = stm[1];
-    var sact = useState(INIT_ACTIVITY);
+    var sact = useLS('activity', INIT_ACTIVITY);
     var activity = sact[0];
     var setActivity = sact[1];
-    var spst = useState(INIT_POSTS);
+    var spst = useLS('posts', INIT_POSTS);
     var posts = spst[0];
     var setPosts = spst[1];
-    var sspl = useState(INIT_SCHOOL_PIPELINE);
+    var sspl = useLS('school_pipeline', INIT_SCHOOL_PIPELINE);
     var schoolPipeline = sspl[0];
     var setSchoolPipeline = sspl[1];
     var sager = activity.filter(function (a) { return a.type === "contact"; });
@@ -3969,6 +4431,15 @@ function App() {
     var sgsr = useState(false);
     var showSearch = sgsr[0];
     var setShowSearch = sgsr[1];
+    var snotif = useState(false);
+    var showNotif = snotif[0]; var setShowNotif = snotif[1];
+    var spdf = useState(false);
+    var showPdf = spdf[0]; var setShowPdf = spdf[1];
+    var stst = useState([]);
+    var toasts = stst[0]; var setToasts = stst[1];
+    var snav = useState(null);
+    var navigateToPipe = snav[0]; var setNavigateToPipe = snav[1];
+    function addToast(t){ var id=Date.now(); setToasts(function(p){return p.concat([Object.assign({id:id},t)]);}); setTimeout(function(){setToasts(function(p){return p.filter(function(x){return x.id!==id;});});},3500); }
     var scn = useState({});
     var classNotes = scn[0];
     var setClassNotes = scn[1];
@@ -4009,20 +4480,26 @@ function App() {
     var notifCount = 0;
     var sagCount = (activity || []).filter(function (s) { return s.type === "contact" && s.status === "open"; }).length;
     var opgCount = (activity || []).filter(function (o) { return o.type === "task" && o.status !== "done" && (user.role === "admin" || o.assignedTo === user.id); }).length;
+    var overdueCount = (activity || []).filter(function(o){ return o.type==="task"&&o.status!=="done"&&o.deadline&&o.deadline<todayStr()&&(user.role==="admin"||o.assignedTo===user.id); }).length;
     function go(pg) { setPage(pg); }
     var mainStyle = { flex: 1, minWidth: 0, background: BG, overflowY: "auto", minHeight: "100vh" };
     return (React.createElement("div", { style: { display: "flex", minHeight: "100vh", background: BG, fontFamily: "'DM Sans',sans-serif" } },
+        React.createElement(GlobalToast, { toasts: toasts }),
+        showNotif && React.createElement(NotifCenter, { open: showNotif, onClose: function(){setShowNotif(false);}, activity: activity, posts: posts, schools: schools, user: user, setActivity: setActivity, onGoPage: go }),
+        showPdf && React.createElement(PdfExport, { user: user, schools: schools, pipeline: pipeline, activity: activity, assignments: assignments, staff: staff, onClose: function(){setShowPdf(false);} }),
+        React.createElement(FloatingCreate, { user: user, schools: schools, staff: staff, activity: activity, setActivity: setActivity, addToast: addToast }),
         React.createElement("link", { rel: "preconnect", href: "https://fonts.googleapis.com" }),
         React.createElement("link", { href: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap", rel: "stylesheet" }),
         showSearch && React.createElement(GlobalSearch, { schools: schools, onNavigate: go, onClose: function () { setShowSearch(false); } }),
-        React.createElement(Sidebar, { user: user, page: page, go: go, logout: function () { setUser(null); }, notifCount: notifCount, sagCount: sagCount, opgaveCount: opgCount }),
+        React.createElement(Sidebar, { user: user, page: page, go: go, logout: function () { setUser(null); clearLS(); }, notifCount: notifCount, sagCount: sagCount, opgaveCount: opgCount, overdueTasks: overdueCount }),
         React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 } },
-            React.createElement(Topbar, { page: page, user: user, onSearch: function () { setShowSearch(true); }, notifCount: notifCount, sagCount: sagCount }),
+            React.createElement(Topbar, { page: page, user: user, onSearch: function () { setShowSearch(true); }, overdueTasks: overdueCount, go: go, onNotif: function(){setShowNotif(true);}, notifCount: overdueCount, onPdf: function(){setShowPdf(true);} }),
             React.createElement("div", { style: mainStyle },
-                page === "dashboard" && React.createElement(Dashboard, { user: user, schools: schools, events: events, activity: activity, assignments: assignments, staff: staff, pipeline: pipeline }),
+                page === "dashboard" && React.createElement(Dashboard, { user: user, schools: schools, events: events, activity: activity, assignments: assignments, staff: staff, pipeline: pipeline, onGoPage: go, addToast: addToast, overdueTasks: overdueCount }),
                 page === "skoler" && React.createElement(Skoler, { user: user, schools: schools, setSchools: setSchools, assignments: assignments, pipeline: pipeline, setPipeline: setPipeline, events: events, setEvents: setEvents, prodStatus: prodStatus, setProdStatus: setProdStatus, elever: elever, setElever: setElever, templates: templates, opgaver: opgaver, setOpgaver: setOpgaver, classNotes: classNotes, setClassNotes: setClassNotes, customFilters: customFilters, setCustomFilters: setCustomFilters, customKonkurrenter: customKonkurrenter, modeskabeloner: modeskabeloner, showArkiv: showArkiv, setShowArkiv: setShowArkiv, konkurrentProfiler: konkurrentProfiler, modeProfiler: modeProfiler }),
                 page === "traditioner" && React.createElement(Traditioner, { user: user, schools: schools, setSchools: setSchools, assignments: assignments, customFilters: customFilters, setCustomFilters: setCustomFilters, customKonkurrenter: customKonkurrenter, modeskabeloner: modeskabeloner }),
-                page === "pipeline" && ["admin", "saelger", "internsalg"].includes(user.role) && React.createElement(PipelineOpgaver, { user: user, schools: schools, setSchools: setSchools, assignments: assignments, staff: staff, activity: activity }),
+                page === "pipeline" && ["admin", "saelger", "internsalg"].includes(user.role) && React.createElement(PipelineOpgaver, { user: user, schools: schools, setSchools: setSchools, assignments: assignments, staff: staff, activity: activity, setActivity: setActivity, setPosts: setPosts, addToast: addToast, navigateToPipe: navigateToPipe, onNavigateDone: function(){setNavigateToPipe(null);} }),
+                page === "kalender" && ["admin", "saelger", "internsalg"].includes(user.role) && React.createElement(Kalender, { user: user, schools: schools, events: events, activity: activity, assignments: assignments, staff: staff, onOpenPipeline: function(sId){setNavigateToPipe({schoolId:sId});setPage("pipeline");} }),
                 page === "kommunikation" && React.createElement(Kommunikation, { user: user, schools: schools, assignments: assignments, staff: staff, activity: activity, setActivity: setActivity, posts: posts, setPosts: setPosts, schoolPipeline: schoolPipeline, setSchoolPipeline: setSchoolPipeline }),
                 page === "rapporter" && React.createElement(Rapporter, { user: user, schools: schools, setSchools: setSchools, activity: activity, assignments: assignments, staff: staff, pipeline: pipeline, konkurrentProfiler: konkurrentProfiler, customKonkurrenter: customKonkurrenter, customFilters: customFilters, setCustomFilters: setCustomFilters }),
                 page === "indstillinger" && React.createElement(Indstillinger, { user: user, schools: schools, assignments: assignments, setAssignments: setAssignments, templates: templates, setTemplates: setTemplates, opgaver: opgaver, setOpgaver: setOpgaver, customKonkurrenter: customKonkurrenter, setCustomKonkurrenter: setCustomKonkurrenter, modeskabeloner: modeskabeloner, setModeskabeloner: setModeskabeloner, konkurrentProfiler: konkurrentProfiler, setKonkurrentProfiler: setKonkurrentProfiler, modeProfiler: modeProfiler, setModeProfiler: setModeProfiler, staff: staff, setStaff: setStaff, sager: sager, pipeline: pipeline }),
@@ -4033,6 +4510,7 @@ function App() {
 var root=ReactDOM.createRoot(document.getElementById('root'));
 root.render(React.createElement(App,null));
 })();
+
 </script>
 </body>
 </html>
