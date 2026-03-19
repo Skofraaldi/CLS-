@@ -85,7 +85,7 @@ var SAG_STATUSES = ["Ny", "Under behandling", "Afsluttet"];
 var SAG_COLORS = { "Ny": { c: RED, bg: REDBG }, "Under behandling": { c: GOLD, bg: GOLDBG }, "Afsluttet": { c: GREEN, bg: GBGN } };
 var TC = { opmaling: { c: GOLD, bg: GOLDBG, l: "Opmåling" }, mode: { c: NAVY, bg: "#E8ECF2", l: "Møde" }, event: { c: GREEN, bg: GBGN, l: "Event" } };
 var OPGAVE_STATUS = ["Aben", "I gang", "Udfort"];
-var OPGAVE_COL = { "Aben": { c: RED, bg: REDBG }, "I gang": { c: GOLD, bg: GOLDBG }, "Udfort": { c: GREEN, bg: GBGN } };
+var OPGAVE_COL = { "Aben": { c: RED, bg: REDBG }, "I gang": { c: GOLD, bg: GOLDBG }, "Udfort": { c: GREEN, bg: GBGN },"open": { c: RED, bg: REDBG }, "inprogress": { c: GOLD, bg: GOLDBG }, "done": { c: GREEN, bg: GBGN } };
 var KAT_COL = { A: { c: GREEN, bg: GBGN }, B: { c: GOLD, bg: GOLDBG }, C: { c: MTD, bg: "#F0EDE8" } };
 var PROC_STATUSES = ["Invited", "Ingen møder", "Virtuel", "Fuld proces"];
 var PROC_COL = { "Invited": { c: BLUE, bg: BLUEBG }, "Ingen møder": { c: MTD, bg: "#F0EDE8" }, "Virtuel": { c: PURP, bg: PURPBG }, "Fuld proces": { c: GREEN, bg: GBGN } };
@@ -996,9 +996,6 @@ function Kommunikation(_a) {
     var contactPerson = scp[0];
     var setContactPerson = scp[1];
     var isInternal = ["admin", "saelger", "internsalg"].includes(user.role);
-    var stab = useState("feed");
-    var tab = stab[0];
-    var setTab = stab[1];
     var sss = useState(null);
     var selSchool = sss[0];
     var setSelSchool = sss[1];
@@ -1057,7 +1054,7 @@ function Kommunikation(_a) {
         });
     }
     function handlePipeStageClick(stage) { setSelPipeStage(stage); if (stage)
-        setTab("feed"); }
+        setMainTab("feed"); }
     var selSchoolObj = selSchool ? schools.find(function (s) { return s.id === selSchool; }) : null;
     var schoolPipeStage = selSchool && schoolPipeline[selSchool] ? schoolPipeline[selSchool].stage : null;
     var schoolPipeObj = schoolPipeStage ? CLS_PIPE_STAGES.find(function (s) { return s.key === schoolPipeStage; }) : null;
@@ -1126,10 +1123,10 @@ function Kommunikation(_a) {
         React.createElement("div", { style: { flex: 1, overflowY: "auto" } },
             React.createElement("div", { style: { padding: "16px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid " + BRD, paddingBottom: 14, background: SFC, position: "sticky", top: 0, zIndex: 10 } },
                 React.createElement("div", { style: { display: "flex", gap: 0, border: "1px solid " + BRD, borderRadius: 7, overflow: "hidden" } },
-                    React.createElement("button", { onClick: function () { setTab("feed"); }, style: { padding: "7px 18px", border: "none", background: tab === "feed" ? NAVY : "transparent", color: tab === "feed" ? "#fff" : MTD, fontSize: 13, fontWeight: tab === "feed" ? 600 : 400, cursor: "pointer", fontFamily: "inherit" } }, "\uD83D\uDCF0 Feed"),
-                    isInternal && React.createElement("button", { onClick: function () { setTab("opgaver"); }, style: { padding: "7px 18px", border: "none", background: tab === "opgaver" ? NAVY : "transparent", color: tab === "opgaver" ? "#fff" : MTD, fontSize: 13, fontWeight: tab === "opgaver" ? 600 : 400, cursor: "pointer", fontFamily: "inherit" } }, "\u2705 Opgaver")),
+                    React.createElement("button", { onClick: function () { setMainTab("feed"); }, style: { padding: "7px 18px", border: "none", background: mainTab === "feed" ? NAVY : "transparent", color: mainTab === "feed" ? "#fff" : MTD, fontSize: 13, fontWeight: mainTab === "feed" ? 600 : 400, cursor: "pointer", fontFamily: "inherit" } }, "\uD83D\uDCF0 Feed"),
+                    isInternal && React.createElement("button", { onClick: function () { setMainTab("opgaver"); }, style: { padding: "7px 18px", border: "none", background: mainTab === "opgaver" ? NAVY : "transparent", color: mainTab === "opgaver" ? "#fff" : MTD, fontSize: 13, fontWeight: mainTab === "opgaver" ? 600 : 400, cursor: "pointer", fontFamily: "inherit" } }, "\u2705 Opgaver")),
                 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
-                    tab === "feed" && selPipeStage && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 20, background: (CLS_PIPE_STAGES.find(function (s) { return s.key === selPipeStage; }) || {}).bg || BLUEBG, border: "1px solid " + (CLS_PIPE_STAGES.find(function (s) { return s.key === selPipeStage; }) || {}).color || BLUE } },
+                    mainTab === "feed" && selPipeStage && (React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 20, background: (CLS_PIPE_STAGES.find(function (s) { return s.key === selPipeStage; }) || {}).bg || BLUEBG, border: "1px solid " + (CLS_PIPE_STAGES.find(function (s) { return s.key === selPipeStage; }) || {}).color || BLUE } },
                         React.createElement("span", { style: { fontSize: 11, fontWeight: 600, color: (CLS_PIPE_STAGES.find(function (s) { return s.key === selPipeStage; }) || {}).color || BLUE } },
                             "Filtrer: ",
                             (CLS_PIPE_STAGES.find(function (s) { return s.key === selPipeStage; }) || {}).label || ""),
@@ -4384,6 +4381,353 @@ function PdfExport(_a) {
         React.createElement("div",{style:{padding:"12px 22px",borderTop:"1px solid "+BRD,display:"flex",gap:8,justifyContent:"flex-end"}},
             React.createElement("button",{onClick:onClose,style:{padding:"9px 18px",borderRadius:6,border:"1px solid "+BRD,background:"transparent",color:MTD,fontSize:13,cursor:"pointer",fontFamily:"inherit"}},"Annuller"),
             React.createElement("button",{onClick:printReport,style:{padding:"9px 20px",borderRadius:6,border:"none",background:NAVY,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}},"🖨 Udskriv / Gem PDF")));
+}
+
+// ─── GLOBAL TOAST ─────────────────────────────────────────────────
+function GlobalToast(_a){
+    var toasts=_a.toasts;
+    if(!toasts||!toasts.length) return null;
+    return React.createElement("div",{style:{position:"fixed",top:18,right:18,zIndex:9999,display:"flex",flexDirection:"column",gap:8,alignItems:"flex-end",pointerEvents:"none"}},
+        React.createElement("style",null,"@keyframes tst{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}"),
+        toasts.map(function(t){
+            var bg=t.type==="email"?BLUE:t.type==="error"?RED:GREEN;
+            var ic=t.type==="email"?"✉️":t.type==="error"?"⚠️":"✓";
+            return React.createElement("div",{key:t.id,style:{background:bg,color:"#fff",padding:"11px 16px",borderRadius:9,fontSize:13,fontWeight:600,boxShadow:"0 4px 20px rgba(0,0,0,.18)",display:"flex",alignItems:"center",gap:8,animation:"tst .25s ease",maxWidth:340,pointerEvents:"all"}},
+                React.createElement("span",{style:{fontSize:15}},ic),
+                React.createElement("span",null,t.msg));
+        }));
+}
+
+// ─── MOBILE STAGE SHEET ───────────────────────────────────────────
+function MobileStageSheet(_a){
+    var stages=_a.stages,currentId=_a.currentId,onSelect=_a.onSelect,onClose=_a.onClose;
+    return React.createElement("div",{onClick:onClose,style:{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:600,display:"flex",alignItems:"flex-end"}},
+        React.createElement("div",{onClick:function(e){e.stopPropagation();},style:{width:"100%",background:SFC,borderRadius:"16px 16px 0 0",padding:"16px 16px 40px",boxShadow:"0 -8px 32px rgba(0,0,0,.18)"}},
+            React.createElement("div",{style:{width:40,height:4,background:BRD,borderRadius:2,margin:"0 auto 18px"}}),
+            React.createElement("div",{style:{fontSize:15,fontWeight:700,color:TXT,marginBottom:16,textAlign:"center",fontFamily:"'Playfair Display',serif"}},"Skift pipeline-trin"),
+            stages.map(function(s){
+                var on=s.id===currentId;
+                return React.createElement("button",{key:s.id,onClick:function(){onSelect(s.id);},style:{width:"100%",padding:"13px 16px",border:"2px solid "+(on?s.color:BRD),background:on?s.color:SFC,color:on?"#fff":TXT,borderRadius:10,marginBottom:8,fontSize:14,fontWeight:on?700:500,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:12,transition:"all .15s"}},
+                    React.createElement("div",{style:{width:12,height:12,borderRadius:"50%",background:on?"#fff":s.color,flexShrink:0}}),
+                    s.label,
+                    on&&React.createElement("span",{style:{marginLeft:"auto",fontSize:12}},"✓"));
+            })));
+}
+
+// ─── NY OPGAVE MODAL ──────────────────────────────────────────────
+function NyOpgaveModal(_a){
+    var schools=_a.schools,staff=_a.staff,user=_a.user,onSave=_a.onSave,onClose=_a.onClose;
+    var st=useState(""); var title=st[0]; var setTitle=st[1];
+    var sb=useState(""); var body=sb[0]; var setBody=sb[1];
+    var sd=useState(""); var deadline=sd[0]; var setDeadline=sd[1];
+    var ss=useState(""); var schoolId=ss[0]; var setSchoolId=ss[1];
+    var sa=useState(String(user.id)); var assignedTo=sa[0]; var setAssignedTo=sa[1];
+    var inp={width:"100%",padding:"9px 12px",borderRadius:6,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,outline:"none",boxSizing:"border-box"};
+    var lbl={fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5,display:"block"};
+    function save(){
+        if(!title.trim()) return;
+        onSave({title:title.trim(),body:body.trim(),deadline:deadline||null,schoolId:schoolId?Number(schoolId):null,assignedTo:Number(assignedTo)});
+    }
+    return React.createElement(Modal,{onClose:onClose,wide:true},
+        React.createElement("div",{style:{background:NAVY,padding:"16px 22px"}},
+            React.createElement("div",{style:{fontSize:16,fontWeight:700,color:"#fff",fontFamily:"'Playfair Display',serif"}},"Ny opgave")),
+        React.createElement("div",{style:{padding:"18px 22px"}},
+            React.createElement("div",{style:{marginBottom:12}},
+                React.createElement("span",{style:lbl},"Titel *"),
+                React.createElement("input",{value:title,onChange:function(e){setTitle(e.target.value);},placeholder:"Beskriv opgaven...",style:inp,autoFocus:true})),
+            React.createElement("div",{style:{marginBottom:12}},
+                React.createElement("span",{style:lbl},"Beskrivelse"),
+                React.createElement("textarea",{value:body,onChange:function(e){setBody(e.target.value);},rows:3,placeholder:"Uddybende noter...",style:Object.assign({},inp,{resize:"vertical",lineHeight:1.6})})),
+            React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}},
+                React.createElement("div",null,
+                    React.createElement("span",{style:lbl},"Deadline"),
+                    React.createElement("input",{type:"date",value:deadline,onChange:function(e){setDeadline(e.target.value);},style:inp})),
+                React.createElement("div",null,
+                    React.createElement("span",{style:lbl},"Tildel til"),
+                    React.createElement("select",{value:assignedTo,onChange:function(e){setAssignedTo(e.target.value);},style:inp},
+                        (staff||[]).filter(function(s){return s.role!=="repr";}).map(function(s){return React.createElement("option",{key:s.id,value:s.id},s.name);})))),
+            React.createElement("div",{style:{marginBottom:18}},
+                React.createElement("span",{style:lbl},"Tilknyt skole (valgfri)"),
+                React.createElement("select",{value:schoolId,onChange:function(e){setSchoolId(e.target.value);},style:inp},
+                    React.createElement("option",{value:""},"Ingen skole"),
+                    schools.map(function(s){return React.createElement("option",{key:s.id,value:s.id},s.name);})))),
+        React.createElement("div",{style:{padding:"12px 22px",borderTop:"1px solid "+BRD,display:"flex",gap:8,justifyContent:"flex-end"}},
+            React.createElement("button",{onClick:onClose,style:{padding:"8px 18px",borderRadius:5,border:"1px solid "+BRD,background:"transparent",color:MTD,fontSize:13,cursor:"pointer",fontFamily:"inherit"}},"Annuller"),
+            React.createElement("button",{onClick:save,disabled:!title.trim(),style:{padding:"8px 18px",borderRadius:5,border:"none",background:title.trim()?NAVY:BRD,color:"#fff",fontSize:13,fontWeight:600,cursor:title.trim()?"pointer":"default",fontFamily:"inherit"}},"Opret opgave")));
+}
+
+
+// ─── QUICK STATS BAR ─────────────────────────────────────────────────────────
+function QuickStatBar(_a){
+    var label=_a.label,value=_a.value,color=_a.color,bg=_a.bg,icon=_a.icon,onClick=_a.onClick,sub=_a.sub;
+    return React.createElement("div",{onClick:onClick,style:{background:SFC,border:"1px solid "+BRD,borderRadius:10,padding:"16px 18px",display:"flex",alignItems:"center",gap:14,cursor:onClick?"pointer":"default",transition:"all .15s",flex:"1 1 180px",minWidth:160},
+        onMouseEnter:function(e){if(onClick){e.currentTarget.style.borderColor=color;e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.08)";}},
+        onMouseLeave:function(e){e.currentTarget.style.borderColor=BRD;e.currentTarget.style.boxShadow="none";}},
+        React.createElement("div",{style:{width:40,height:40,borderRadius:10,background:bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}},icon),
+        React.createElement("div",null,
+            React.createElement("div",{style:{fontSize:22,fontWeight:800,color:color,fontFamily:"'Playfair Display',serif",lineHeight:1.1}},""+value),
+            React.createElement("div",{style:{fontSize:11,color:MTD,fontWeight:500,marginTop:2}},label),
+            sub&&React.createElement("div",{style:{fontSize:10,color:color,fontWeight:600,marginTop:1}},sub)));
+}
+
+
+function Kalender(_a) {
+    var user = _a.user, schools = _a.schools, events = _a.events, activity = _a.activity, assignments = _a.assignments, staff = _a.staff, onOpenPipeline = _a.onOpenPipeline;
+    var MONTHS = ["Januar","Februar","Marts","April","Maj","Juni","Juli","August","September","Oktober","November","December"];
+    var DAYS = ["Man","Tir","Ons","Tor","Fre","Lør","Søn"];
+    var now = new Date();
+    var scm = useState(now.getMonth());
+    var curMonth = scm[0]; var setCurMonth = scm[1];
+    var scy = useState(now.getFullYear());
+    var curYear = scy[0]; var setCurYear = scy[1];
+    var ssd = useState(null);
+    var selDate = ssd[0]; var setSelDate = ssd[1];
+    var svw = useState("maaned");
+    var view = svw[0]; var setView = svw[1];
+    var sfStaff = useState("all");
+    var filterStaff = sfStaff[0]; var setFilterStaff = sfStaff[1];
+    var sfType = useState("all");
+    var filterType = sfType[0]; var setFilterType = sfType[1];
+    var isAdmin = user.role === "admin";
+    var mySchoolIds = isAdmin ? schools.map(function(s){return s.id;}) : schools.filter(function(s){return (assignments[s.id]||[]).includes(user.id);}).map(function(s){return s.id;});
+    var today = new Date().toISOString().split("T")[0];
+    // Gather all calendar items: events + tasks with deadlines from pipeline
+    function getAllItems() {
+        var items = [];
+        // Events
+        (events||[]).forEach(function(e) {
+            if (!mySchoolIds.includes(e.schoolId) && e.schoolId !== 0) return;
+            items.push({ id:"ev_"+e.id, date: e.date, title: e.title, type: e.type==="opmaling"?"opmåling":e.type==="mode"?"møde":"event", school: e.school, staffId: e.staffId, color: e.type==="opmaling"?"#B8892A":e.type==="mode"?"#1A4A7A":"#3D6B50", bg: e.type==="opmaling"?"#F5EDD8":e.type==="mode"?"#E8EFF8":"#E4EFE9", icon: e.type==="opmaling"?"📐":e.type==="mode"?"🤝":"🎉", kind:"event", raw:e });
+        });
+        // Activity tasks with deadlines
+        (activity||[]).filter(function(a){return a.type==="task"&&a.deadline&&a.status!=="done";}).forEach(function(a){
+            if (a.schoolId && !mySchoolIds.includes(a.schoolId)) return;
+            var school = schools.find(function(s){return s.id===a.schoolId;});
+            items.push({ id:"act_"+a.id, date: a.deadline, title: a.title, type:"opgave", school: school?school.name:"Intern", staffId: a.assignedTo, color: a.deadline<today?"#A0392A":"#5B3A8A", bg: a.deadline<today?"#FAE8E6":"#EDE8F5", icon:"✅", kind:"task", overdue: a.deadline<today, raw:a });
+        });
+        return items;
+    }
+    var allItems = getAllItems();
+    function filtered(items) {
+        return items.filter(function(item){
+            if (filterStaff !== "all" && String(item.staffId) !== filterStaff) return false;
+            if (filterType !== "all" && item.type !== filterType) return false;
+            return true;
+        });
+    }
+    function itemsOnDate(d) { return filtered(allItems).filter(function(i){return i.date===d;}); }
+    function datesInMonth() {
+        var first = new Date(curYear, curMonth, 1);
+        var last = new Date(curYear, curMonth+1, 0);
+        var startDow = (first.getDay()+6)%7; // Mon=0
+        var days = [];
+        for (var i=0;i<startDow;i++) days.push(null);
+        for (var d=1;d<=last.getDate();d++) {
+            var ds = curYear+"-"+String(curMonth+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+            days.push(ds);
+        }
+        while (days.length%7!==0) days.push(null);
+        return days;
+    }
+    function prevMonth() { if(curMonth===0){setCurMonth(11);setCurYear(curYear-1);}else{setCurMonth(curMonth-1);} }
+    function nextMonth() { if(curMonth===11){setCurMonth(0);setCurYear(curYear+1);}else{setCurMonth(curMonth+1);} }
+    var days = datesInMonth();
+    var selItems = selDate ? itemsOnDate(selDate) : [];
+    var upcomingAll = filtered(allItems).filter(function(i){return i.date>=today;}).sort(function(a,b){return a.date.localeCompare(b.date);});
+    var internalStaff = [{id:"all",name:"Alle medarbejdere"}].concat((staff||[]).filter(function(s){return s.role!=="repr";}).map(function(s){return {id:String(s.id),name:s.name};}));
+    var typeOptions = [{v:"all",l:"Alle typer"},{v:"opmåling",l:"📐 Opmåling"},{v:"møde",l:"🤝 Møde"},{v:"event",l:"🎉 Event"},{v:"opgave",l:"✅ Opgave"}];
+    function fmtDate(d) { if(!d) return ""; var m=["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"]; var p=d.split("-"); return parseInt(p[2])+". "+m[parseInt(p[1])-1]; }
+    return React.createElement("div", { style:{ display:"flex", height:"calc(100vh - 56px)", overflow:"hidden", background:BG } },
+        // Left panel
+        React.createElement("div", { style:{ width:220, background:SFC, borderRight:"1px solid "+BRD, display:"flex", flexDirection:"column", overflowY:"auto", flexShrink:0 } },
+            React.createElement("div", { style:{ padding:"16px 14px 10px", borderBottom:"1px solid "+BRD } },
+                React.createElement("div", { style:{ fontSize:14, fontWeight:700, color:TXT, fontFamily:"'Playfair Display',serif", marginBottom:12 } }, "📅 Kalender"),
+                React.createElement("div", { style:{ fontSize:11, fontWeight:700, color:MTD, textTransform:"uppercase", letterSpacing:.7, marginBottom:6 } }, "Visning"),
+                React.createElement("div", { style:{ display:"flex", gap:0, border:"1px solid "+BRD, borderRadius:5, overflow:"hidden", marginBottom:14 } },
+                    ["maaned","liste"].map(function(v){ var on=view===v; return React.createElement("button",{ key:v, onClick:function(){setView(v);}, style:{ flex:1, padding:"6px", border:"none", background:on?NAVY:"transparent", color:on?"#fff":MTD, fontSize:11, fontWeight:on?700:400, cursor:"pointer", fontFamily:"inherit" } }, v==="maaned"?"Måned":"Liste"); })),
+                React.createElement("div", { style:{ fontSize:11, fontWeight:700, color:MTD, textTransform:"uppercase", letterSpacing:.7, marginBottom:5 } }, "Medarbejder"),
+                React.createElement("select", { value:filterStaff, onChange:function(e){setFilterStaff(e.target.value);}, style:{ width:"100%", padding:"7px 8px", borderRadius:5, border:"1px solid "+BRD, fontSize:12, fontFamily:"inherit", marginBottom:10, background:SFC, color:TXT } },
+                    internalStaff.map(function(s){ return React.createElement("option",{ key:s.id, value:s.id }, s.name); })),
+                React.createElement("div", { style:{ fontSize:11, fontWeight:700, color:MTD, textTransform:"uppercase", letterSpacing:.7, marginBottom:5 } }, "Type"),
+                React.createElement("select", { value:filterType, onChange:function(e){setFilterType(e.target.value);}, style:{ width:"100%", padding:"7px 8px", borderRadius:5, border:"1px solid "+BRD, fontSize:12, fontFamily:"inherit", background:SFC, color:TXT } },
+                    typeOptions.map(function(o){ return React.createElement("option",{ key:o.v, value:o.v }, o.l); }))),
+            // Upcoming mini-list in sidebar
+            React.createElement("div", { style:{ padding:"12px 14px", flex:1 } },
+                React.createElement("div", { style:{ fontSize:11, fontWeight:700, color:MTD, textTransform:"uppercase", letterSpacing:.7, marginBottom:8 } }, "Kommende"),
+                upcomingAll.slice(0,8).map(function(item){
+                    return React.createElement("div", { key:item.id, onClick:function(){setSelDate(item.date);}, style:{ display:"flex", gap:8, alignItems:"flex-start", padding:"7px 0", borderBottom:"1px solid "+BRD, cursor:"pointer" } },
+                        React.createElement("div", { style:{ textAlign:"center", width:32, flexShrink:0, background:item.overdue?"#FAE8E6":"#F5F2EE", borderRadius:5, padding:"3px 0" } },
+                            React.createElement("div", { style:{ fontSize:14, fontWeight:800, color:item.color } }, item.date.split("-")[2]),
+                            React.createElement("div", { style:{ fontSize:8, color:item.color, textTransform:"uppercase" } }, ["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"][parseInt(item.date.split("-")[1])-1])),
+                        React.createElement("div", { style:{ flex:1, minWidth:0 } },
+                            React.createElement("div", { style:{ fontSize:11, fontWeight:600, color:TXT, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" } }, item.icon+" "+item.title),
+                            React.createElement("div", { style:{ fontSize:10, color:MTD } }, item.school)));
+                }),
+                upcomingAll.length===0 && React.createElement("div", { style:{ fontSize:11, color:MTD, textAlign:"center", paddingTop:16 } }, "Ingen kommende aktiviteter"))),
+        // Main area
+        React.createElement("div", { style:{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" } },
+            // Header with month nav
+            React.createElement("div", { style:{ padding:"12px 24px", background:SFC, borderBottom:"1px solid "+BRD, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 } },
+                React.createElement("div", { style:{ display:"flex", alignItems:"center", gap:12 } },
+                    React.createElement("button", { onClick:prevMonth, style:{ padding:"6px 12px", border:"1px solid "+BRD, borderRadius:5, background:"transparent", color:TXT, fontSize:14, cursor:"pointer", fontFamily:"inherit" } }, "‹"),
+                    React.createElement("div", { style:{ fontSize:17, fontWeight:700, color:TXT, fontFamily:"'Playfair Display',serif", minWidth:200, textAlign:"center" } }, MONTHS[curMonth]+" "+curYear),
+                    React.createElement("button", { onClick:nextMonth, style:{ padding:"6px 12px", border:"1px solid "+BRD, borderRadius:5, background:"transparent", color:TXT, fontSize:14, cursor:"pointer", fontFamily:"inherit" } }, "›"),
+                    React.createElement("button", { onClick:function(){var n=new Date();setCurMonth(n.getMonth());setCurYear(n.getFullYear());setSelDate(today);}, style:{ padding:"6px 12px", border:"1px solid "+BRD, borderRadius:5, background:NAVY, color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" } }, "I dag")),
+                React.createElement("div", { style:{ fontSize:12, color:MTD } },
+                    filtered(allItems).filter(function(i){return i.date.startsWith(curYear+"-"+String(curMonth+1).padStart(2,"0"));}).length,
+                    " aktiviteter denne måned")),
+            React.createElement("div", { style:{ flex:1, overflowY:"auto", display:"flex" } },
+                // Calendar grid
+                React.createElement("div", { style:{ flex:1, padding:"0 20px 20px" } },
+                    view==="maaned" ? React.createElement("div", null,
+                        // Day headers
+                        React.createElement("div", { style:{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2, marginBottom:4, paddingTop:14 } },
+                            DAYS.map(function(d){ return React.createElement("div",{ key:d, style:{ textAlign:"center", fontSize:11, fontWeight:700, color:MTD, textTransform:"uppercase", letterSpacing:.5, paddingBottom:6 } }, d); })),
+                        // Day cells
+                        React.createElement("div", { style:{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:3 } },
+                            days.map(function(dateStr, idx){
+                                if(!dateStr) return React.createElement("div",{ key:"empty-"+idx, style:{ minHeight:88, borderRadius:7 } });
+                                var dayItems = itemsOnDate(dateStr);
+                                var isToday = dateStr===today;
+                                var isSel = dateStr===selDate;
+                                var hasOverdue = dayItems.some(function(i){return i.overdue;});
+                                return React.createElement("div",{ key:dateStr, onClick:function(){setSelDate(isSel?null:dateStr);}, style:{ minHeight:88, borderRadius:7, border:"2px solid "+(isSel?NAVY:isToday?"#B8892A":hasOverdue?"#F0C0BB":"transparent"), background:isSel?"#F0EDE8":isToday?"#FEFBF4":SFC, cursor:"pointer", padding:"6px 7px", position:"relative", transition:"all .15s", boxShadow: dayItems.length>0?"0 1px 4px rgba(0,0,0,.06)":"none" }, onMouseEnter:function(e){if(!isSel)e.currentTarget.style.background="#F8F6F2";}, onMouseLeave:function(e){if(!isSel)e.currentTarget.style.background=isToday?"#FEFBF4":SFC;} },
+                                    React.createElement("div", { style:{ fontSize:12, fontWeight: isToday||isSel?800:dayItems.length>0?600:400, color:isToday?GOLD:isSel?NAVY:dayItems.length>0?TXT:MTD, marginBottom:4 } }, parseInt(dateStr.split("-")[2])),
+                                    dayItems.slice(0,3).map(function(item, i){
+                                        return React.createElement("div",{ key:item.id, style:{ background:item.bg, borderRadius:3, padding:"1px 4px", marginBottom:2, fontSize:9, fontWeight:700, color:item.color, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" } },
+                                            item.icon+" "+item.title);
+                                    }),
+                                    dayItems.length>3 && React.createElement("div",{ style:{ fontSize:9, color:MTD, fontWeight:600 } }, "+"+(dayItems.length-3)+" mere"));
+                            })))
+                    : React.createElement("div", { style:{ paddingTop:14 } },
+                        // List view: group by date
+                        (function(){
+                            var visItems = filtered(allItems).filter(function(i){return i.date.startsWith(curYear+"-"+String(curMonth+1).padStart(2,"0"));}).sort(function(a,b){return a.date.localeCompare(b.date);});
+                            if(visItems.length===0) return React.createElement("div",{ style:{ textAlign:"center", paddingTop:60, color:MTD } }, "Ingen aktiviteter denne måned");
+                            var byDate = {};
+                            visItems.forEach(function(i){(byDate[i.date]=byDate[i.date]||[]).push(i);});
+                            return Object.keys(byDate).sort().map(function(d){
+                                var dateItems = byDate[d];
+                                var isT = d===today;
+                                return React.createElement("div",{ key:d, style:{ marginBottom:18 } },
+                                    React.createElement("div",{ style:{ display:"flex", alignItems:"center", gap:10, marginBottom:8 } },
+                                        React.createElement("div",{ style:{ background:isT?GOLD:NAVY, color:"#fff", borderRadius:6, padding:"4px 12px", fontSize:12, fontWeight:700 } }, fmtDate(d)+(isT?" · I dag":"")),
+                                        React.createElement("div",{ style:{ flex:1, height:1, background:BRD } })),
+                                    dateItems.map(function(item){
+                                        return React.createElement("div",{ key:item.id, style:{ display:"flex", gap:12, alignItems:"flex-start", padding:"10px 14px", background:SFC, borderRadius:8, border:"1px solid "+BRD, marginBottom:6 } },
+                                            React.createElement("div",{ style:{ width:8, height:8, borderRadius:"50%", background:item.color, flexShrink:0, marginTop:4 } }),
+                                            React.createElement("div",{ style:{ flex:1 } },
+                                                React.createElement("div",{ style:{ fontSize:13, fontWeight:700, color:TXT, marginBottom:2 } }, item.icon+" "+item.title),
+                                                React.createElement("div",{ style:{ fontSize:11, color:MTD } }, item.school),
+                                                item.overdue && React.createElement("div",{ style:{ fontSize:10, fontWeight:700, color:"#A0392A", marginTop:2 } }, "⚠️ Overskredet")),
+                                            React.createElement("div",{ style:{ fontSize:11, background:item.bg, color:item.color, borderRadius:10, padding:"2px 8px", fontWeight:700, flexShrink:0 } }, item.type));
+                                    }));
+                            });
+                        })())),
+                // Right detail panel when date selected
+                selDate && React.createElement("div", { style:{ width:280, background:SFC, borderLeft:"1px solid "+BRD, padding:"16px 16px", flexShrink:0, overflowY:"auto" } },
+                    React.createElement("div", { style:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 } },
+                        React.createElement("div", { style:{ fontSize:14, fontWeight:700, color:TXT } }, fmtDate(selDate)+(selDate===today?" (I dag)":"")),
+                        React.createElement("button", { onClick:function(){setSelDate(null);}, style:{ background:"transparent", border:"none", fontSize:18, cursor:"pointer", color:MTD } }, "×")),
+                    selItems.length===0 && React.createElement("div", { style:{ textAlign:"center", padding:"28px 0", color:MTD } },
+                        React.createElement("div", { style:{ fontSize:28, marginBottom:8 } }, "📭"),
+                        React.createElement("div", { style:{ fontSize:13 } }, "Ingen aktiviteter denne dag")),
+                    selItems.map(function(item){
+                        return React.createElement("div", { key:item.id, style:{ background:item.bg, borderRadius:9, padding:"12px 14px", marginBottom:10, border:"1px solid "+item.color+"40" } },
+                            React.createElement("div", { style:{ display:"flex", alignItems:"center", gap:8, marginBottom:6 } },
+                                React.createElement("span", { style:{ fontSize:18 } }, item.icon),
+                                React.createElement("div", { style:{ flex:1 } },
+                                    React.createElement("div", { style:{ fontSize:13, fontWeight:700, color:TXT } }, item.title),
+                                    React.createElement("div", { style:{ fontSize:11, color:item.color, fontWeight:600, textTransform:"capitalize" } }, item.type))),
+                            React.createElement("div", { style:{ fontSize:11, color:MTD, marginBottom:item.raw&&item.raw.time?3:0 } }, "🏫 "+item.school),
+                            item.raw&&item.raw.time && React.createElement("div", { style:{ fontSize:11, color:MTD } }, "🕐 "+item.raw.time),
+                            item.raw&&item.raw.loc && React.createElement("div", { style:{ fontSize:11, color:MTD } }, "📍 "+item.raw.loc),
+                            item.overdue && React.createElement("div", { style:{ fontSize:11, fontWeight:700, color:"#A0392A", marginTop:6, background:"#FAE8E6", padding:"3px 8px", borderRadius:4 } }, "⚠️ Overskredet"));
+                    })))));
+}
+
+// ─── LOCALSTORAGE HOOK ────────────────────────────────────────────
+function useLS(key, init) {
+    var stored = null;
+    try { var r = localStorage.getItem("cls_"+key); stored = r ? JSON.parse(r) : null; } catch(e){}
+    var s = useState(stored !== null ? stored : (typeof init==="function"?init():init));
+    var val=s[0]; var set0=s[1];
+    function set(v){ set0(function(prev){ var next=typeof v==="function"?v(prev):v; try{localStorage.setItem("cls_"+key,JSON.stringify(next));}catch(e){} return next; }); }
+    return [val,set];
+}
+function clearLS(){ try{Object.keys(localStorage).filter(function(k){return k.startsWith("cls_");}).forEach(function(k){localStorage.removeItem(k);});}catch(e){} }
+
+// ─── GLOBAL TOAST ─────────────────────────────────────────────────
+function GlobalToast(_a){
+    var toasts=_a.toasts;
+    if(!toasts||!toasts.length) return null;
+    return React.createElement("div",{style:{position:"fixed",top:18,right:18,zIndex:9999,display:"flex",flexDirection:"column",gap:8,alignItems:"flex-end",pointerEvents:"none"}},
+        React.createElement("style",null,"@keyframes tst{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}"),
+        toasts.map(function(t){
+            var bg=t.type==="email"?BLUE:t.type==="error"?RED:GREEN;
+            var ic=t.type==="email"?"✉️":t.type==="error"?"⚠️":"✓";
+            return React.createElement("div",{key:t.id,style:{background:bg,color:"#fff",padding:"11px 16px",borderRadius:9,fontSize:13,fontWeight:600,boxShadow:"0 4px 20px rgba(0,0,0,.18)",display:"flex",alignItems:"center",gap:8,animation:"tst .25s ease",maxWidth:340,pointerEvents:"all"}},
+                React.createElement("span",{style:{fontSize:15}},ic),
+                React.createElement("span",null,t.msg));
+        }));
+}
+
+// ─── MOBILE STAGE SHEET ───────────────────────────────────────────
+function MobileStageSheet(_a){
+    var stages=_a.stages,currentId=_a.currentId,onSelect=_a.onSelect,onClose=_a.onClose;
+    return React.createElement("div",{onClick:onClose,style:{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:600,display:"flex",alignItems:"flex-end"}},
+        React.createElement("div",{onClick:function(e){e.stopPropagation();},style:{width:"100%",background:SFC,borderRadius:"16px 16px 0 0",padding:"16px 16px 40px",boxShadow:"0 -8px 32px rgba(0,0,0,.18)"}},
+            React.createElement("div",{style:{width:40,height:4,background:BRD,borderRadius:2,margin:"0 auto 18px"}}),
+            React.createElement("div",{style:{fontSize:15,fontWeight:700,color:TXT,marginBottom:16,textAlign:"center",fontFamily:"'Playfair Display',serif"}},"Skift pipeline-trin"),
+            stages.map(function(s){
+                var on=s.id===currentId;
+                return React.createElement("button",{key:s.id,onClick:function(){onSelect(s.id);},style:{width:"100%",padding:"13px 16px",border:"2px solid "+(on?s.color:BRD),background:on?s.color:SFC,color:on?"#fff":TXT,borderRadius:10,marginBottom:8,fontSize:14,fontWeight:on?700:500,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:12,transition:"all .15s"}},
+                    React.createElement("div",{style:{width:12,height:12,borderRadius:"50%",background:on?"#fff":s.color,flexShrink:0}}),
+                    s.label,
+                    on&&React.createElement("span",{style:{marginLeft:"auto",fontSize:12}},"✓"));
+            })));
+}
+
+// ─── NY OPGAVE MODAL ──────────────────────────────────────────────
+function NyOpgaveModal(_a){
+    var schools=_a.schools,staff=_a.staff,user=_a.user,onSave=_a.onSave,onClose=_a.onClose;
+    var st=useState(""); var title=st[0]; var setTitle=st[1];
+    var sb=useState(""); var body=sb[0]; var setBody=sb[1];
+    var sd=useState(""); var deadline=sd[0]; var setDeadline=sd[1];
+    var ss=useState(""); var schoolId=ss[0]; var setSchoolId=ss[1];
+    var sa=useState(String(user.id)); var assignedTo=sa[0]; var setAssignedTo=sa[1];
+    var inp={width:"100%",padding:"9px 12px",borderRadius:6,border:"1px solid "+BRD,fontSize:13,fontFamily:"'DM Sans',sans-serif",color:TXT,outline:"none",boxSizing:"border-box"};
+    var lbl={fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:5,display:"block"};
+    function save(){
+        if(!title.trim()) return;
+        onSave({title:title.trim(),body:body.trim(),deadline:deadline||null,schoolId:schoolId?Number(schoolId):null,assignedTo:Number(assignedTo)});
+    }
+    return React.createElement(Modal,{onClose:onClose,wide:true},
+        React.createElement("div",{style:{background:NAVY,padding:"16px 22px"}},
+            React.createElement("div",{style:{fontSize:16,fontWeight:700,color:"#fff",fontFamily:"'Playfair Display',serif"}},"Ny opgave")),
+        React.createElement("div",{style:{padding:"18px 22px"}},
+            React.createElement("div",{style:{marginBottom:12}},
+                React.createElement("span",{style:lbl},"Titel *"),
+                React.createElement("input",{value:title,onChange:function(e){setTitle(e.target.value);},placeholder:"Beskriv opgaven...",style:inp,autoFocus:true})),
+            React.createElement("div",{style:{marginBottom:12}},
+                React.createElement("span",{style:lbl},"Beskrivelse"),
+                React.createElement("textarea",{value:body,onChange:function(e){setBody(e.target.value);},rows:3,placeholder:"Uddybende noter...",style:Object.assign({},inp,{resize:"vertical",lineHeight:1.6})})),
+            React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}},
+                React.createElement("div",null,
+                    React.createElement("span",{style:lbl},"Deadline"),
+                    React.createElement("input",{type:"date",value:deadline,onChange:function(e){setDeadline(e.target.value);},style:inp})),
+                React.createElement("div",null,
+                    React.createElement("span",{style:lbl},"Tildel til"),
+                    React.createElement("select",{value:assignedTo,onChange:function(e){setAssignedTo(e.target.value);},style:inp},
+                        (staff||[]).filter(function(s){return s.role!=="repr";}).map(function(s){return React.createElement("option",{key:s.id,value:s.id},s.name);})))),
+            React.createElement("div",{style:{marginBottom:18}},
+                React.createElement("span",{style:lbl},"Tilknyt skole (valgfri)"),
+                React.createElement("select",{value:schoolId,onChange:function(e){setSchoolId(e.target.value);},style:inp},
+                    React.createElement("option",{value:""},"Ingen skole"),
+                    schools.map(function(s){return React.createElement("option",{key:s.id,value:s.id},s.name);})))),
+        React.createElement("div",{style:{padding:"12px 22px",borderTop:"1px solid "+BRD,display:"flex",gap:8,justifyContent:"flex-end"}},
+            React.createElement("button",{onClick:onClose,style:{padding:"8px 18px",borderRadius:5,border:"1px solid "+BRD,background:"transparent",color:MTD,fontSize:13,cursor:"pointer",fontFamily:"inherit"}},"Annuller"),
+            React.createElement("button",{onClick:save,disabled:!title.trim(),style:{padding:"8px 18px",borderRadius:5,border:"none",background:title.trim()?NAVY:BRD,color:"#fff",fontSize:13,fontWeight:600,cursor:title.trim()?"pointer":"default",fontFamily:"inherit"}},"Opret opgave")));
 }
 
 //  APP 
