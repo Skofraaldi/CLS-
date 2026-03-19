@@ -968,8 +968,7 @@ function PipelineOpgaver(_a) {
                 React.createElement("div",{style:{fontSize:48,marginBottom:12}},"\u2705"),
                 React.createElement("div",{style:{fontSize:15,fontWeight:600,color:TXT,marginBottom:4}},doneQuery?"Ingen resultater":"Ingen afsluttede opgaver endnu"),
                 React.createElement("div",{style:{fontSize:12}},doneQuery?"Pr\u00F8v et andet s\u00F8geord":"Afslut en opgave i pipeline-panelet")),
-            filteredDone.length>0&&React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:10}},
-                filteredDone.map(function(t){
+            filteredDone.length>0&&React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:10}}, filteredDone.map(function(t){
                     var item=baseItems.find(function(i){return i.id===t.itemId;});
                     var stg=item?stages.find(function(s){return s.id===item.stage;})||stages[0]:stages[0];
                     return React.createElement("div",{key:t.id,style:{background:SFC,borderRadius:9,padding:"14px 16px",border:"1px solid "+BRD,display:"flex",gap:12,alignItems:"flex-start"}},
@@ -1120,7 +1119,7 @@ function Kommunikation(_a) {
                             overdue ? "Overskredet" : "Frist ",
                             !overdue ? " " + fmtDate(t.deadline) : "")));
                 })))),
-        React.createElement("div", { style: { flex: 1, overflowY: "auto" } },
+        React.createElement("div", { style: { flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", minWidth: 0 } },
             React.createElement("div", { style: { padding: "16px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid " + BRD, paddingBottom: 14, background: SFC, position: "sticky", top: 0, zIndex: 10 } },
                 React.createElement("div", { style: { display: "flex", gap: 0, border: "1px solid " + BRD, borderRadius: 7, overflow: "hidden" } },
                     React.createElement("button", { onClick: function () { setMainTab("feed"); }, style: { padding: "7px 18px", border: "none", background: mainTab === "feed" ? NAVY : "transparent", color: mainTab === "feed" ? "#fff" : MTD, fontSize: 13, fontWeight: mainTab === "feed" ? 600 : 400, cursor: "pointer", fontFamily: "inherit" } }, "\uD83D\uDCF0 Feed"),
@@ -1149,37 +1148,35 @@ function Kommunikation(_a) {
                     React.createElement("div", { style: { fontSize: 12 } }, "Tilpas filtrene til venstre eller opret et nyt opslag"))) : sortedPosts.map(function (post) {
                     return (React.createElement(FeedPost, { key: post.id, post: post, user: user, schools: schools, onTogglePin: togglePin, onAddComment: addComment, onReact: addReaction }));
                 }))))),
-        mainTab === "opgaver" && isInternal && (React.createElement("div", { style:{position:"absolute",top:130,left:0,right:0,bottom:0,overflowY:"auto",padding:"0 24px 40px"} },
-            (activity||[]).filter(function(a){return a.type==="task"&&(user.role==="admin"||a.assignedTo===user.id);}).length===0
-                && React.createElement("div",{style:{textAlign:"center",padding:"60px 0",color:MTD}},
+         mainTab === "opgaver" && isInternal && React.createElement("div", { style:{flex:1,overflowY:"auto",padding:"16px 24px 40px"} },
+            (function() {
+                var tasks = (activity||[]).filter(function(a){return a.type==="task"&&(user.role==="admin"||a.assignedTo===user.id);}).sort(function(a,b){return (a.deadline||"9999").localeCompare(b.deadline||"9999");});
+                if (!tasks.length) return React.createElement("div",{style:{textAlign:"center",padding:"60px 0",color:MTD}},
                     React.createElement("div",{style:{fontSize:36,marginBottom:10}},"✅"),
-                    React.createElement("div",{style:{fontSize:14,fontWeight:600,color:TXT}},"Ingen opgaver"),
-                    React.createElement("div",{style:{fontSize:12,marginTop:4}},"Tryk '+ Ny opgave' for at oprette en")),
-            (activity||[]).filter(function(a){return a.type==="task"&&(user.role==="admin"||a.assignedTo===user.id);})
-                .sort(function(a,b){return (a.deadline||"9999").localeCompare(b.deadline||"9999");})
-                .map(function(task){
-                    var td=new Date().toISOString().split("T")[0];
-                    var ov=task.deadline&&task.deadline<td&&task.status!=="done";
-                    var sc=schools.find(function(s){return s.id===task.schoolId;});
-                    var asgn=(staff||[]).find(function(s){return s.id===task.assignedTo;});
-                    var cols={open:{c:RED,bg:REDBG},inprogress:{c:GOLD,bg:GOLDBG},done:{c:GREEN,bg:GBGN}};
-                    var col=cols[task.status]||cols.open;
-                    return React.createElement("div",{key:task.id,style:{background:SFC,border:"1px solid "+(ov?RED+"60":BRD),borderRadius:9,padding:"12px 16px",marginBottom:8,borderLeft:"4px solid "+(ov?RED:col.c)}},
-                        React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}},
+                    React.createElement("div",{style:{fontSize:14,fontWeight:600,color:TXT,marginBottom:4}},"Ingen opgaver"),
+                    React.createElement("div",{style:{fontSize:12}},"Tryk '+ Ny opgave' for at oprette en"));
+                return React.createElement("div",null, tasks.map(function(task){
+                    var now = new Date().toISOString().split("T")[0];
+                    var ov = !!(task.deadline && task.deadline.localeCompare(now) < 0 && task.status!=="done");
+                    var sc = schools.find(function(s){return s.id===task.schoolId;});
+                    var asgn = (staff||[]).find(function(s){return s.id===task.assignedTo;});
+                    var cols = {open:{c:RED,bg:REDBG},inprogress:{c:GOLD,bg:GOLDBG},done:{c:GREEN,bg:GBGN}};
+                    var col = cols[task.status]||cols.open;
+                    return React.createElement("div",{key:task.id,style:{background:SFC,border:"1px solid "+(ov?RED+"60":BRD),borderRadius:9,padding:"14px 16px",marginBottom:8,borderLeft:"4px solid "+(ov?RED:col.c),boxShadow:"0 1px 3px rgba(0,0,0,.04)"}},
+                        React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
                             React.createElement("div",{style:{fontSize:13,fontWeight:700,color:TXT,flex:1,marginRight:8}},task.title),
-                            React.createElement("span",{style:{fontSize:10,fontWeight:700,color:col.c,background:col.bg,padding:"2px 8px",borderRadius:10}},task.status==="open"?"Åben":task.status==="inprogress"?"I gang":"Færdig")),
-                        task.body&&React.createElement("div",{style:{fontSize:12,color:MTD,marginBottom:6,lineHeight:1.5}},task.body),
-                        React.createElement("div",{style:{display:"flex",gap:12,flexWrap:"wrap",fontSize:11,color:MTD,marginBottom:8}},
-                            sc&&React.createElement("span",null,"🏫 "+sc.name),
-                            asgn&&React.createElement("span",null,"👤 "+asgn.name),
-                            task.deadline&&React.createElement("span",{style:{color:ov?RED:MTD,fontWeight:ov?700:400}},(ov?"⚠️ Overskredet: ":"📅 ")+task.deadline)),
+                            React.createElement("span",{style:{fontSize:10,fontWeight:700,color:col.c,background:col.bg,padding:"2px 8px",borderRadius:10,flexShrink:0}},task.status==="open"?"Aben":task.status==="inprogress"?"I gang":"Faerdig")),
+                        task.body && React.createElement("div",{style:{fontSize:12,color:MTD,lineHeight:1.5,marginBottom:8}},task.body),
+                        React.createElement("div",{style:{display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:MTD,marginBottom:8}}, sc && React.createElement("span",null,"Skole: "+sc.name),
+                            asgn && React.createElement("span",null,"Ansvarlig: "+asgn.name),
+                            task.deadline && React.createElement("span",{style:{color:ov?RED:MTD,fontWeight:ov?700:400}},(ov?"Overskredet: ":"Frist: ")+task.deadline)),
                         React.createElement("div",{style:{display:"flex",gap:6}},
                             ["open","inprogress","done"].map(function(st){
-                                var c2=cols[st]; var on=task.status===st;
-                                return React.createElement("button",{key:st,onClick:function(){setActivity(function(p){return p.map(function(a){return a.id===task.id?Object.assign({},a,{status:st}):a;});});},style:{padding:"3px 10px",borderRadius:5,border:"1px solid "+(on?c2.c:BRD),background:on?c2.bg:"transparent",color:on?c2.c:MTD,fontSize:10,fontWeight:on?700:400,cursor:"pointer",fontFamily:"inherit"}},
-                                    st==="open"?"Åben":st==="inprogress"?"I gang":"Færdig");
+                                var sc2=cols[st]; var active=task.status===st;
+                                return React.createElement("button",{key:st,onClick:function(){setActivity(function(prev){return prev.map(function(a){return a.id===task.id?Object.assign({},a,{status:st}):a;});});},style:{padding:"3px 10px",borderRadius:5,border:"1px solid "+(active?sc2.c:BRD),background:active?sc2.bg:"transparent",color:active?sc2.c:MTD,fontSize:10,fontWeight:active?700:400,cursor:"pointer",fontFamily:"inherit"}},st==="open"?"Aben":st==="inprogress"?"I gang":"Faerdig");
                             })));
-                }))),
+                }));
+            })()),
         selSchoolObj && (React.createElement("div", { style: { width: 232, background: SFC, borderLeft: "1px solid " + BRD, overflowY: "auto", flexShrink: 0, padding: "16px 14px" } },
             React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: TXT, fontFamily: "'Playfair Display',serif", marginBottom: 2 } }, selSchoolObj.name),
             React.createElement("div", { style: { fontSize: 11, color: MTD, marginBottom: 12 } }, selSchoolObj.city),
@@ -1939,8 +1936,7 @@ function Sidebar(_a) {
                     React.createElement("div",{style:{color:"#fff",fontWeight:800,fontSize:18,fontFamily:"'Playfair Display',serif",lineHeight:1.1}},
                         "CLS",React.createElement("span",{style:{color:GOLD}},"+"),
                         React.createElement("span",{style:{fontSize:10,color:"rgba(255,255,255,.3)",fontWeight:400,marginLeft:4}},"Sales OS"))))),
-        React.createElement("nav",{style:{flex:1,padding:"6px 8px",overflowY:"auto"}},
-            GroupLabel("Arbejde"),
+        React.createElement("nav",{style:{flex:1,padding:"6px 8px",overflowY:"auto"}}, GroupLabel("Arbejde"),
             mainItems.map(NavBtn),
             toolItems.length>0&&GroupLabel("Analyse"),
             toolItems.map(NavBtn),
@@ -4099,8 +4095,7 @@ function Login(_a) {
                 React.createElement("div",{style:{color:"rgba(255,255,255,.35)",fontSize:13,letterSpacing:.3}},"C.L. Seifert · Kongelig Hofleverandør")),
             React.createElement("div",{style:{background:"rgba(255,255,255,.04)",borderRadius:14,padding:"28px",border:"1px solid rgba(255,255,255,.08)"}},
                 React.createElement("div",{style:{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.35)",marginBottom:16,textAlign:"center",textTransform:"uppercase",letterSpacing:.9}},"Vælg din profil"),
-                React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
-                    Object.entries(USERS).map(function(e){
+                React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}, Object.entries(USERS).map(function(e){
                         var k=e[0],v=e[1];
                         var rc={admin:GOLD,saelger:BLUE,internsalg:PURP,repr:GREEN}[v.role]||NAVY;
                         return React.createElement("button",{key:k,onClick:function(){onLogin(v);},
@@ -4221,8 +4216,7 @@ function NotifCenter(_a) {
                                 }));
                         });
                     })()),
-            React.createElement("div",{style:{padding:"12px 20px",borderTop:"1px solid "+BRD,display:"flex",gap:8}},
-                onGoPage && React.createElement("button",{onClick:function(){onGoPage("pipeline");onClose();},
+            React.createElement("div",{style:{padding:"12px 20px",borderTop:"1px solid "+BRD,display:"flex",gap:8}}, onGoPage && React.createElement("button",{onClick:function(){onGoPage("pipeline");onClose();},
                     style:{flex:1,padding:"9px",borderRadius:7,border:"none",background:NAVY,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}},"→ Åbn Pipeline"),
                 onGoPage && React.createElement("button",{onClick:function(){onGoPage("kalender");onClose();},
                     style:{flex:1,padding:"9px",borderRadius:7,border:"1px solid "+BRD,background:"transparent",color:TXT,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}},"→ Kalender"))));
@@ -4284,8 +4278,7 @@ function FloatingCreate(_a) {
                     style:{width:"100%",padding:"9px",borderRadius:7,border:"none",background:qtitle.trim()?NAVY:BRD,color:"#fff",fontSize:13,fontWeight:600,cursor:qtitle.trim()?"pointer":"default",fontFamily:"inherit"}},
                     "Opret "+quickType))),
         // Speed dial menu
-        open && React.createElement("div",{style:{position:"absolute",bottom:70,right:0,display:"flex",flexDirection:"column",gap:8,alignItems:"flex-end"}},
-            quickActions.map(function(a){
+        open && React.createElement("div",{style:{position:"absolute",bottom:70,right:0,display:"flex",flexDirection:"column",gap:8,alignItems:"flex-end"}}, quickActions.map(function(a){
                 return React.createElement("button",{key:a.label,onClick:function(){setQuickType(a.label);setOpen(false);},
                     style:{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",borderRadius:24,background:SFC,border:"1px solid "+BRD,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600,color:TXT,boxShadow:"0 4px 16px rgba(0,0,0,.12)",whiteSpace:"nowrap",animation:"fadeIn .15s ease",transition:"all .12s"},
                     onMouseEnter:function(e){e.currentTarget.style.background=a.bg;e.currentTarget.style.borderColor=a.color;},
@@ -4333,7 +4326,7 @@ function PdfExport(_a) {
             var rows=tasks.map(function(t){
                 var sc=schools.find(function(s){return s.id===t.schoolId;});
                 var asgn=(staff||[]).find(function(s){return s.id===t.assignedTo;});
-                var ov=t.deadline&&t.deadline<today?"style='background:#FAE8E6'":" ";
+                var ov=t.deadline&&t.deadline < today?"style='background:#FAE8E6'":" ";
                 return "<tr "+ov+"><td>"+(t.deadline||"-")+"</td><td>"+t.title+"</td><td>"+(sc?sc.name:"-")+"</td><td>"+(asgn?asgn.name:"-")+"</td><td>"+t.status+"</td></tr>";
             }).join("");
             content="<h2>Åbne Opgaver</h2><table border='1' cellpadding='8' style='border-collapse:collapse;width:100%;font-family:sans-serif;font-size:13px'><thead style='background:#152035;color:#fff'><tr><th>Deadline</th><th>Opgave</th><th>Skole</th><th>Ansvarlig</th><th>Status</th></tr></thead><tbody>"+rows+"</tbody></table>";
@@ -4364,8 +4357,7 @@ function PdfExport(_a) {
         React.createElement("div",{style:{padding:"20px 22px"}},
             React.createElement("div",{style:{marginBottom:14}},
                 React.createElement("div",{style:{fontSize:11,fontWeight:700,color:MTD,textTransform:"uppercase",letterSpacing:.7,marginBottom:8}},"Rapport type"),
-                React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
-                    reports.map(function(r){
+                React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}}, reports.map(function(r){
                         var on=report===r.v;
                         return React.createElement("button",{key:r.v,onClick:function(){setReport(r.v);},
                             style:{padding:"9px 16px",borderRadius:8,border:"2px solid "+(on?NAVY:BRD),background:on?NAVY:"transparent",color:on?"#fff":TXT,fontSize:13,fontWeight:on?700:400,cursor:"pointer",fontFamily:"inherit"}},r.l);
@@ -4461,8 +4453,7 @@ function NyOpgaveModal(_a){
 function QuickStatBar(_a){
     var label=_a.label,value=_a.value,color=_a.color,bg=_a.bg,icon=_a.icon,onClick=_a.onClick,sub=_a.sub;
     return React.createElement("div",{onClick:onClick,style:{background:SFC,border:"1px solid "+BRD,borderRadius:10,padding:"16px 18px",display:"flex",alignItems:"center",gap:14,cursor:onClick?"pointer":"default",transition:"all .15s",flex:"1 1 180px",minWidth:160},
-        onMouseEnter:function(e){if(onClick){e.currentTarget.style.borderColor=color;e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.08)";}},
-        onMouseLeave:function(e){e.currentTarget.style.borderColor=BRD;e.currentTarget.style.boxShadow="none";}},
+        onMouseEnter:function(e){if(onClick){e.currentTarget.style.borderColor=color;e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.08)";}}, onMouseLeave:function(e){e.currentTarget.style.borderColor=BRD;e.currentTarget.style.boxShadow="none";}},
         React.createElement("div",{style:{width:40,height:40,borderRadius:10,background:bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}},icon),
         React.createElement("div",null,
             React.createElement("div",{style:{fontSize:22,fontWeight:800,color:color,fontFamily:"'Playfair Display',serif",lineHeight:1.1}},""+value),
@@ -4503,7 +4494,7 @@ function Kalender(_a) {
         (activity||[]).filter(function(a){return a.type==="task"&&a.deadline&&a.status!=="done";}).forEach(function(a){
             if (a.schoolId && !mySchoolIds.includes(a.schoolId)) return;
             var school = schools.find(function(s){return s.id===a.schoolId;});
-            items.push({ id:"act_"+a.id, date: a.deadline, title: a.title, type:"opgave", school: school?school.name:"Intern", staffId: a.assignedTo, color: a.deadline<today?"#A0392A":"#5B3A8A", bg: a.deadline<today?"#FAE8E6":"#EDE8F5", icon:"✅", kind:"task", overdue: a.deadline<today, raw:a });
+            items.push({ id:"act_"+a.id, date: a.deadline, title: a.title, type:"opgave", school: school?school.name:"Intern", staffId: a.assignedTo, color: a.deadline < today?"#A0392A":"#5B3A8A", bg: a.deadline < today?"#FAE8E6":"#EDE8F5", icon:"✅", kind:"task", overdue: a.deadline < today, raw:a });
         });
         return items;
     }
@@ -4521,7 +4512,7 @@ function Kalender(_a) {
         var last = new Date(curYear, curMonth+1, 0);
         var startDow = (first.getDay()+6)%7; // Mon=0
         var days = [];
-        for (var i=0;i<startDow;i++) days.push(null);
+        for (var i=0;i < startDow;i++) days.push(null);
         for (var d=1;d<=last.getDate();d++) {
             var ds = curYear+"-"+String(curMonth+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
             days.push(ds);
@@ -4824,7 +4815,7 @@ function App() {
     var notifCount = 0;
     var sagCount = (activity || []).filter(function (s) { return s.type === "contact" && s.status === "open"; }).length;
     var opgCount = (activity || []).filter(function (o) { return o.type === "task" && o.status !== "done" && (user.role === "admin" || o.assignedTo === user.id); }).length;
-    var overdueCount = (activity || []).filter(function(o){ return o.type==="task"&&o.status!=="done"&&o.deadline&&o.deadline<todayStr()&&(user.role==="admin"||o.assignedTo===user.id); }).length;
+    var overdueCount = (activity || []).filter(function(o){ return o.type==="task"&&o.status!=="done"&&o.deadline&&o.deadline < todayStr()&&(user.role==="admin"||o.assignedTo===user.id); }).length;
     function go(pg) { setPage(pg); }
     var mainStyle = { flex: 1, minWidth: 0, background: BG, overflowY: "auto", minHeight: "100vh" };
     return (React.createElement("div", { style: { display: "flex", minHeight: "100vh", background: BG, fontFamily: "'DM Sans',sans-serif" } },
