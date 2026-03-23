@@ -4913,7 +4913,10 @@ return !p.internal && (can(user,"settings") || (schools||[]).some(function(s){re
 
 
 
-export default App;
+
+
+// Mount
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
 
 </script>
 </body>
