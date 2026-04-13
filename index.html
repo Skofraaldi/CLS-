@@ -98,9 +98,9 @@ var ALL_PERMS = [
 
 // ─── STANDARD PAGES PR. ROLLE ─────────────────────────────────────────────────
 var DEFAULT_ROLE_PAGES = {
-    admin:      ["dashboard","skoler","kalender","kommunikation","traditioner","rapporter","indstillinger","guides"],
-    saelger:    ["dashboard","skoler","kalender","kommunikation","traditioner","rapporter","guides"],
-    internsalg: ["dashboard","skoler","kalender","kommunikation","rapporter","guides"],
+    admin:      ["dashboard","skoler","kalender","kommunikation","traditioner","rapporter","indstillinger","guides","opgaver"],
+    saelger:    ["dashboard","skoler","kalender","kommunikation","traditioner","rapporter","guides","opgaver"],
+    internsalg: ["dashboard","skoler","kalender","kommunikation","traditioner","rapporter","guides","opgaver"],
     repr:       ["dashboard","minskole","kommunikation","guides"],
 };
 
@@ -228,12 +228,24 @@ function DateInput(_a) {
 }
 
 // ─── LOCALSTORAGE HOOK ────────────────────────────────────────────────────────
+// ─── STORAGE HELPERS ───────────────────────────────────────────────────────
+var _saveFlash = null;
+function _showSaveFlash() {
+    var el = document.getElementById("cls-save-flash");
+    if (!el) return;
+    el.style.opacity = "1";
+    el.style.transform = "translateY(0)";
+    clearTimeout(_saveFlash);
+    _saveFlash = setTimeout(function() {
+        if (el) { el.style.opacity = "0"; el.style.transform = "translateY(8px)"; }
+    }, 1200);
+}
 function useLS(key, init) {
     var stored = null;
     try { var r = localStorage.getItem("cls_"+key); stored = r ? JSON.parse(r) : null; } catch(e){}
     var s = useState(stored !== null ? stored : (typeof init==="function"?init():init));
     var val=s[0]; var set0=s[1];
-    function set(v){ set0(function(prev){ var next=typeof v==="function"?v(prev):v; try{localStorage.setItem("cls_"+key,JSON.stringify(next));}catch(e){} return next; }); }
+    function set(v){ _showSaveFlash(); set0(function(prev){ var next=typeof v==="function"?v(prev):v; try{localStorage.setItem("cls_"+key,JSON.stringify(next));}catch(e){} return next; }); }
     return [val,set];
 }
 function clearLS(){ try{Object.keys(localStorage).filter(function(k){return k.startsWith("cls_");}).forEach(function(k){localStorage.removeItem(k);});}catch(e){} }
@@ -439,24 +451,12 @@ var INIT_POSTS = [
 // ─── OPGAVE MODAL ─────────────────────────────────────────────────────────────
 function OpgaveModal(_a) {
     var schools = _a.schools, staff = _a.staff, user = _a.user, onSave = _a.onSave, onClose = _a.onClose;
-    var st = useState("");
-    var title = st[0];
-    var setTitle = st[1];
-    var sb = useState("");
-    var body = sb[0];
-    var setBody = sb[1];
-    var ss = useState(user.schoolId || "");
-    var selSchool = ss[0];
-    var setSelSchool = ss[1];
-    var sa = useState(user.id || "");
-    var assignedTo = sa[0];
-    var setAssignedTo = sa[1];
-    var sd = useState("");
-    var deadline = sd[0];
-    var setDeadline = sd[1];
-    var sp = useState("normal");
-    var priority = sp[0];
-    var setPriority = sp[1];
+    var st=useState(""); var title=st[0]; var setTitle=st[1];
+    var sb=useState(""); var body=sb[0]; var setBody=sb[1];
+    var ss=useState(user.schoolId || ""); var selSchool=ss[0]; var setSelSchool=ss[1];
+    var sa=useState(user.id || ""); var assignedTo=sa[0]; var setAssignedTo=sa[1];
+    var sd=useState(""); var deadline=sd[0]; var setDeadline=sd[1];
+    var sp=useState("normal"); var priority=sp[0]; var setPriority=sp[1];
     var iS = { width: "100%", padding: "9px 11px", borderRadius: 5, border: "1px solid " + BRD, fontSize: 13, fontFamily: "'DM Sans',sans-serif", color: TXT, boxSizing: "border-box", outline: "none" };
     var internalStaff = (staff || []).filter(function (s) { return s.role !== "repr"; });
     function save() {
@@ -530,21 +530,11 @@ function StaffContactModal(_a) {
 // ─── NY POST MODAL ────────────────────────────────────────────────────────────
 function NyPostModal(_a) {
     var schools = _a.schools, user = _a.user, onSave = _a.onSave, onClose = _a.onClose;
-    var st = useState("opdate");
-    var type = st[0];
-    var setType = st[1];
-    var ss = useState("");
-    var selSchool = ss[0];
-    var setSelSchool = ss[1];
-    var sti = useState("");
-    var title = sti[0];
-    var setTitle = sti[1];
-    var sb = useState("");
-    var body = sb[0];
-    var setBody = sb[1];
-    var sp = useState(false);
-    var pinned = sp[0];
-    var setPinned = sp[1];
+    var st=useState("opdate"); var type=st[0]; var setType=st[1];
+    var ss=useState(""); var selSchool=ss[0]; var setSelSchool=ss[1];
+    var sti=useState(""); var title=sti[0]; var setTitle=sti[1];
+    var sb=useState(""); var body=sb[0]; var setBody=sb[1];
+    var sp=useState(false); var pinned=sp[0]; var setPinned=sp[1];
     var iS = { width: "100%", padding: "9px 11px", borderRadius: 5, border: "1px solid " + BRD, fontSize: 13, fontFamily: "'DM Sans',sans-serif", color: TXT, boxSizing: "border-box", outline: "none" };
     function save() {
         if (!title.trim() || !selSchool)
@@ -589,15 +579,9 @@ function NyPostModal(_a) {
 // ─── FEED POST CARD ───────────────────────────────────────────────────────────
 function FeedPost(_a) {
     var post = _a.post, user = _a.user, schools = _a.schools, onTogglePin = _a.onTogglePin, onAddComment = _a.onAddComment, onReact = _a.onReact;
-    var sex = useState(false);
-    var showComments = sex[0];
-    var setShowComments = sex[1];
-    var snc = useState(false);
-    var newComment = snc[0];
-    var setNewComment = snc[1];
-    var sct = useState("");
-    var commentText = sct[0];
-    var setCommentText = sct[1];
+    var sex=useState(false); var showComments=sex[0]; var setShowComments=sex[1];
+    var snc=useState(false); var newComment=snc[0]; var setNewComment=snc[1];
+    var sct=useState(""); var commentText=sct[0]; var setCommentText=sct[1];
     var canPin = can(user, "edit");
     var pt = FEED_POST_TYPES[post.type] || FEED_POST_TYPES.opdate;
     var school = schools.find(function (s) { return s.id === post.schoolId; });
@@ -744,7 +728,7 @@ function CohortAktivitetTab(_a) {
             if (!newActTitle.trim()) return;
             var now2 = new Date().toISOString();
             var meetDate = newActDl || todayStr();
-            var item = { id:Date.now(), type:newActType, title:newActTitle.trim(), body:newActBody.trim(), meetingTime:newActType==="meeting"?newActTime:null, 
+            var item = { id:Date.now(), type:newActType, title:newActTitle.trim(), body:newActBody.trim(), meetingTime:newActType==="meeting"?newActTime:null,
                 format:newActType==="meeting"?newActFmt:null, modeTyper:newActType==="meeting"?newActTyper:null,
                 modeTid:newActType==="meeting"?newActTid:null, kategori:newActType==="meeting"?newActCat:null,
                 schoolId:school.id, cohortId:co.id, createdBy:user.name, createdByIni:user.ini, createdById:user.id, assignedTo:user.id, status:newActType==="task"?"open":"done", deadline:newActDl||null, date:newActDl||null, createdAt:today2 };
@@ -774,7 +758,6 @@ function CohortAktivitetTab(_a) {
         var inpS = {width:"100%",padding:"7px 10px",borderRadius:5,border:"1px solid "+BRD,fontSize:12,fontFamily:"inherit",outline:"none"};
         return React.createElement("div", { style:{padding:"14px 16px"} },
 
-            // ── PIPELINE INLINE SECTION ───────────────────────────
             React.createElement("div", { style:{background:"#F8F6F2",borderRadius:8,border:"1px solid "+BRD,marginBottom:14,padding:"12px 14px"} },
                 React.createElement("div", { style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom: editingPipe?10:0} },
                     React.createElement("div", { style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"} },
@@ -797,14 +780,12 @@ function CohortAktivitetTab(_a) {
                         React.createElement("button",{onClick:function(e){e.stopPropagation();setEditingPipe(false);},style:{padding:"5px 12px",borderRadius:5,border:"1px solid "+BRD,background:"transparent",color:MTD,fontSize:11,cursor:"pointer",fontFamily:"inherit"}},"Annuller"),
                         React.createElement("button",{onClick:function(e){e.stopPropagation();savePipeInline();},style:{padding:"5px 14px",borderRadius:5,border:"none",background:NAVY,color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}},"Gem")))),
 
-            // ── SIDST KONTAKTET ───────────────────────────────────
             React.createElement("div", { style:{display:"flex",alignItems:"center",gap:8,marginBottom:14,padding:"7px 12px",borderRadius:6,background:daysSince===null?"#F0EDE8":daysSince>14?REDBG:daysSince>7?GOLDBG:GBGN,border:"1px solid "+(daysSince===null?BRD:daysSince>14?RED+"44":daysSince>7?GOLD+"44":GREEN+"44")} },
                 React.createElement("span",{style:{fontSize:11,color:MTD}}, "Sidst kontaktet:"),
                 React.createElement("span",{style:{fontSize:12,fontWeight:700,color:daysSince===null?MTD:daysSince>14?RED:daysSince>7?GOLD:GREEN}},
                     daysSince===null?"Ingen aktivitet registreret":daysSince===0?"I dag":daysSince===1?"I går":daysSince+" dage siden"),
                 daysSince!==null && lastContact && React.createElement("span",{style:{fontSize:10,color:MTD,marginLeft:"auto"}}, "Senest: "+lastContact.title.slice(0,35)+(lastContact.title.length>35?"…":""))),
 
-            // ── ÅRGANGFILTER ─────────────────────────────────────
             React.createElement("div", { style:{display:"flex",gap:6,marginBottom:12,alignItems:"center"} },
                 React.createElement("span",{style:{fontSize:11,color:MTD}}, "Vis:"),
                 [["co_"+co.id, "Årgang "+co.year],["all","Alle år"]].map(function(pair){
@@ -820,7 +801,6 @@ function CohortAktivitetTab(_a) {
                     })),
                 React.createElement("span",{style:{fontSize:10,color:MTD,marginLeft:"auto"}},schoolActs.length+" aktiviteter")),
 
-            // ── KVIKOPRET ────────────────────────────────────────
             canEdit && !showNewAct && React.createElement("button", { onClick:function(){setShowNewAct(true);}, style:{marginBottom:12,padding:"6px 14px",borderRadius:5,border:"1.5px dashed "+BRD,background:"transparent",color:MTD,fontSize:12,cursor:"pointer",fontFamily:"inherit"} }, "+ Registrér aktivitet"),
             showNewAct && React.createElement("div", { style:{marginBottom:14,padding:"12px 14px",background:"#F8F6F2",borderRadius:8,border:"1px solid "+BRD} },
                 React.createElement("div", { style:{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"} },
@@ -879,7 +859,6 @@ function CohortAktivitetTab(_a) {
                     React.createElement("button", {onClick:function(){setShowNewAct(false);setNewActTitle("");setNewActBody("");},style:{padding:"5px 12px",borderRadius:5,border:"1px solid "+BRD,background:"transparent",color:MTD,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}, "Annuller"),
                     React.createElement("button", {onClick:saveNewAct,disabled:!newActTitle.trim(),style:{padding:"5px 14px",borderRadius:5,border:"none",background:newActTitle.trim()?NAVY:BRD,color:"#fff",fontSize:12,fontWeight:600,cursor:newActTitle.trim()?"pointer":"default",fontFamily:"inherit"}}, "Gem"))),
 
-            // ── AKTIVITETSLOG ────────────────────────────────────
             schoolActs.length === 0 && React.createElement("div", { style:{textAlign:"center",padding:"24px 0",color:MTD,fontSize:13} }, "Ingen aktivitet"+(actFilter!=="all"?" for dette år":"")),
             schoolActs.map(function(act, idx) {
                 var ac = ACT_COLS[act.type]||{c:MTD,bg:"#F0EDE8"};
@@ -913,7 +892,7 @@ function CohortAktivitetTab(_a) {
 
 function Kommunikation(_a) {
     var user=_a.user, schools=_a.schools, assignments=_a.assignments, staff=_a.staff,
-        activity=_a.activity, setActivity=_a.setActivity, posts=_a.posts, setPosts=_a.setPosts, addToast=_a.addToast;
+        activity=_a.activity, setActivity=_a.setActivity, posts=_a.posts, setPosts=_a.setPosts, addToast=_a.addToast||function(){};
     var isInternal = can(user,"view_all");
     var isRepr     = user.role==="repr";
     var mySchoolIds = isRepr ? [user.schoolId]
@@ -1242,15 +1221,9 @@ var INIT_KONKURRENTER = [
 function SaelgerFilter(_a) {
     var value = _a.value, onChange = _a.onChange, label = _a.label, customFilters = _a.customFilters, setCustomFilters = _a.setCustomFilters, schools = _a.schools, schoolId = _a.schoolId, canEdit = _a.canEdit;
     var saelgere = ALL_STAFF.filter(function (s) { return s.role === "saelger" || s.role === "internsalg"; });
-    var sa = useState(false);
-    var showAdd = sa[0];
-    var setShowAdd = sa[1];
-    var sl = useState("");
-    var newLabel = sl[0];
-    var setNewLabel = sl[1];
-    var sp = useState([]);
-    var picked = sp[0];
-    var setPicked = sp[1];
+    var sa=useState(false); var showAdd=sa[0]; var setShowAdd=sa[1];
+    var sl=useState(""); var newLabel=sl[0]; var setNewLabel=sl[1];
+    var sp=useState([]); var picked=sp[0]; var setPicked=sp[1];
     /* MODE A — assign school to filters (shown inside SkoleInfoModal) */
     if (schoolId !== undefined) {
         return (React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" } },
@@ -1329,7 +1302,7 @@ function SaelgerFilter(_a) {
                     React.createElement("button", { onClick: function () { if (!newLabel.trim())
                             return; var autoIds = schools ? schools.filter(function (s) { var ic = s.city === newLabel; var ik = s.trad && ("Kat. " + s.trad.kategori) === newLabel; var ip = s.procesStatus === newLabel; return ic || ik || ip; }).map(function (s) { return s.id; }) : []; var schoolIds = picked.length > 0 ? picked : autoIds; setCustomFilters(function (p) { return p.concat([{ id: Date.now(), label: newLabel.trim(), schoolIds: schoolIds }]); }); setShowAdd(false); setNewLabel(""); setPicked([]); }, style: { padding: "8px 16px", borderRadius: 5, border: "none", background: newLabel ? NAVY : "#C0BDB7", color: "#fff", fontSize: 13, fontWeight: 600, cursor: newLabel ? "pointer" : "default", fontFamily: "inherit" } }, "Opret filter"))))));
 }
-//  ELEV MODAL  kun navn + betalt 
+//  ELEV MODAL  kun navn + betalt
 function ElevStatusModal(_a) {
     var school = _a.school, cohort = _a.cohort, cls = _a.cls, onClose = _a.onClose, elever = _a.elever, setElever = _a.setElever, userRole = _a.userRole;
     var clsElever = elever[cls.id] || [];
@@ -1388,7 +1361,7 @@ function ElevStatusModal(_a) {
             canEdit && React.createElement("button", { onClick: addElev, style: { padding: "6px 14px", borderRadius: 5, border: "1.5px dashed " + BRD, background: "transparent", color: MTD, fontSize: 12, cursor: "pointer", fontFamily: "inherit" } }, "+ Tilf\u00F8j elev"),
             React.createElement("button", { onClick: onClose, style: { padding: "8px 18px", borderRadius: 5, border: "1px solid " + BRD, background: "transparent", color: MTD, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginLeft: "auto" } }, "Luk"))));
 }
-//  REPR DETALJE MODAL 
+//  REPR DETALJE MODAL
 function ReprDetaljeModal(_a) {
     var repr = _a.repr, slot = _a.slot, school = _a.school, cohort = _a.cohort, cls = _a.cls, onRemove = _a.onRemove, onClose = _a.onClose, canEdit = _a.canEdit;
     return (React.createElement(Modal, { onClose: onClose },
@@ -1424,27 +1397,15 @@ function ReprDetaljeModal(_a) {
             canEdit && React.createElement("button", { onClick: onRemove, style: { padding: "8px 16px", borderRadius: 5, border: "1px solid " + RED, background: REDBG, color: RED, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "Fjern repr\u00E6sentant"),
             React.createElement("button", { onClick: onClose, style: { padding: "8px 18px", borderRadius: 5, border: "1px solid " + BRD, background: "transparent", color: MTD, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginLeft: "auto" } }, "Luk"))));
 }
-//  INTERN OPGAVE MODAL 
+//  INTERN OPGAVE MODAL
 function NySkoleModal(_a) {
     var onSave = _a.onSave, onClose = _a.onClose;
-    var sn = useState("");
-    var name = sn[0];
-    var setName = sn[1];
-    var sc = useState("");
-    var city = sc[0];
-    var setCity = sc[1];
-    var sco = useState("");
-    var contact = sco[0];
-    var setContact = sco[1];
-    var sph = useState("");
-    var phone = sph[0];
-    var setPhone = sph[1];
-    var sty = useState("Årsaftale");
-    var type = sty[0];
-    var setType = sty[1];
-    var ska = useState("");
-    var kat = ska[0];
-    var setKat = ska[1];
+    var sn=useState(""); var name=sn[0]; var setName=sn[1];
+    var sc=useState(""); var city=sc[0]; var setCity=sc[1];
+    var sco=useState(""); var contact=sco[0]; var setContact=sco[1];
+    var sph=useState(""); var phone=sph[0]; var setPhone=sph[1];
+    var sty=useState("Årsaftale"); var type=sty[0]; var setType=sty[1];
+    var ska=useState(""); var kat=ska[0]; var setKat=ska[1];
     function save() {
         if (!name.trim())
             return;
@@ -1473,18 +1434,12 @@ function NySkoleModal(_a) {
             React.createElement("button", { onClick: onClose, style: { padding: "8px 18px", borderRadius: 5, border: "1px solid " + BRD, background: "transparent", color: MTD, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, "Annuller"),
             React.createElement("button", { onClick: save, style: { padding: "8px 18px", borderRadius: 5, border: "none", background: name ? NAVY : "#C0BDB7", color: "#fff", fontSize: 13, fontWeight: 600, cursor: name ? "pointer" : "default", fontFamily: "inherit" } }, "Opret skole"))));
 }
-//  NY KLASSE MODAL 
+//  NY KLASSE MODAL
 function NyKlasseModal(_a) {
     var school = _a.school, cohort = _a.cohort, onSave = _a.onSave, onClose = _a.onClose;
-    var sn = useState("");
-    var name = sn[0];
-    var setName = sn[1];
-    var ss = useState("0");
-    var students = ss[0];
-    var setStudents = ss[1];
-    var sp = useState(["Studenterhue"]);
-    var prods = sp[0];
-    var setProds = sp[1];
+    var sn=useState(""); var name=sn[0]; var setName=sn[1];
+    var ss=useState("0"); var students=ss[0]; var setStudents=ss[1];
+    var sp=useState(["Studenterhue"]); var prods=sp[0]; var setProds=sp[1];
     function toggleP(p) { setProds(function (prev) { return prev.includes(p) ? prev.filter(function (x) { return x !== p; }) : [].concat(prev, [p]); }); }
     function save() {
         if (!name.trim())
@@ -1511,12 +1466,10 @@ function NyKlasseModal(_a) {
             React.createElement("button", { onClick: onClose, style: { padding: "8px 18px", borderRadius: 5, border: "1px solid " + BRD, background: "transparent", color: MTD, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, "Annuller"),
             React.createElement("button", { onClick: save, style: { padding: "8px 18px", borderRadius: 5, border: "none", background: name ? NAVY : "#C0BDB7", color: "#fff", fontSize: 13, fontWeight: 600, cursor: name ? "pointer" : "default", fontFamily: "inherit" } }, "Tilf\u00F8j klasse"))));
 }
-//  PRODUKTIONSFLOW MODAL 
+//  PRODUKTIONSFLOW MODAL
 function ProduktionModal(_a) {
     var school = _a.school, cohort = _a.cohort, cls = _a.cls, onClose = _a.onClose, prodStatus = _a.prodStatus, setProdStatus = _a.setProdStatus, userRole = _a.userRole;
-    var sp = useState(cls.products[0] || "Studenterhue");
-    var selProd = sp[0];
-    var setSelProd = sp[1];
+    var sp=useState(cls.products[0] || "Studenterhue"); var selProd=sp[0]; var setSelProd=sp[1];
     var status = prodStatus[cls.id] || {};
     var st = status[selProd] || { step: 0, notes: {}, korrekturBy: "Elever" };
     var flow = PROD_FLOWS[selProd] || [];
@@ -1564,37 +1517,19 @@ function ProduktionModal(_a) {
                 "%"),
             React.createElement("button", { onClick: onClose, style: { padding: "7px 18px", borderRadius: 5, border: "1px solid " + BRD, background: "transparent", color: MTD, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, "Luk"))));
 }
-//  PIPELINE MODAL 
-//  SKABELON EDITOR 
+//  PIPELINE MODAL
+//  SKABELON EDITOR
 function SkabelonModal(_a) {
     var item = _a.item, onSave = _a.onSave, onClose = _a.onClose;
-    var sn = useState(item ? item.name : "");
-    var name = sn[0];
-    var setName = sn[1];
-    var st = useState(item ? item.type : "opmaling");
-    var type = st[0];
-    var setType = st[1];
-    var sd = useState(item ? item.description : "");
-    var desc = sd[0];
-    var setDesc = sd[1];
-    var snt = useState(item ? item.noteTemplate : "");
-    var noteTemplate = snt[0];
-    var setNoteT = snt[1];
-    var sr = useState(item ? item.rules : []);
-    var rules = sr[0];
-    var setRules = sr[1];
-    var sib = useState(item && item.inviteMailBody ? item.inviteMailBody : "Hej [NAVN],\n\nDu er nu oprettet som klasserepræsentant for [KLASSE] på [SKOLE].\n\nLog ind her: [LINK]\n\nMed venlig hilsen\nC.L. Seifert");
-    var invBody = sib[0];
-    var setInvBody = sib[1];
-    var sis = useState(item && item.inviteMailSubject ? item.inviteMailSubject : "Velkommen som klasserepræsentant — CLS");
-    var invSubject = sis[0];
-    var setInvSubject = sis[1];
-    var sic = useState(item && item.inviteChannel ? item.inviteChannel : "mail");
-    var invChannel = sic[0];
-    var setInvChannel = sic[1];
-    var soa = useState(null);
-    var openRule = soa[0];
-    var setOpenRule = soa[1];
+    var sn=useState(item ? item.name : ""); var name=sn[0]; var setName=sn[1];
+    var st=useState(item ? item.type : "opmaling"); var type=st[0]; var setType=st[1];
+    var sd=useState(item ? item.description : ""); var desc=sd[0]; var setDesc=sd[1];
+    var snt=useState(item ? item.noteTemplate : ""); var noteTemplate=snt[0]; var setNoteT=snt[1];
+    var sr=useState(item ? item.rules : []); var rules=sr[0]; var setRules=sr[1];
+    var sib=useState(item && item.inviteMailBody ? item.inviteMailBody : "Hej [NAVN],\n\nDu er nu oprettet som klasserepræsentant for [KLASSE] på [SKOLE].\n\nLog ind her: [LINK]\n\nMed venlig hilsen\nC.L. Seifert"); var invBody=sib[0]; var setInvBody=sib[1];
+    var sis=useState(item && item.inviteMailSubject ? item.inviteMailSubject : "Velkommen som klasserepræsentant — CLS"); var invSubject=sis[0]; var setInvSubject=sis[1];
+    var sic=useState(item && item.inviteChannel ? item.inviteChannel : "mail"); var invChannel=sic[0]; var setInvChannel=sic[1];
+    var soa=useState(null); var openRule=soa[0]; var setOpenRule=soa[1];
     var nid = useRef(Date.now());
     var TRIGGERS = ["14 dage før", "7 dage før", "3 dage før", "2 dage før", "Dagen for", "1 dag efter", "3 dage efter", "1 uge efter"];
     var CHANNELS = [{ v: "mail", l: "✉️ Mail" }, { v: "sms", l: "📱 SMS" }, { v: "begge", l: "📲 Begge" }];
@@ -1657,27 +1592,13 @@ function InviteModal(_a) {
     var defaultBody = allInvTemplates.length > 0 ? allInvTemplates[0].inviteMailBody : "Hej [NAVN],\n\nDu er nu oprettet som klasserepræsentant for [KLASSE] på [SKOLE].\n\nLog ind her: [LINK]\n\nMed venlig hilsen\nC.L. Seifert";
     var defaultSubj = allInvTemplates.length > 0 ? allInvTemplates[0].inviteMailSubject : "Velkommen som klasserepræsentant — CLS";
     var defaultCh = allInvTemplates.length > 0 ? allInvTemplates[0].inviteChannel : "mail";
-    var se = useState("");
-    var email = se[0];
-    var setEmail = se[1];
-    var sn = useState("");
-    var name = sn[0];
-    var setName = sn[1];
-    var sb = useState(defaultBody);
-    var body = sb[0];
-    var setBody = sb[1];
-    var ssb = useState(defaultSubj);
-    var subject = ssb[0];
-    var setSubject = ssb[1];
-    var sch = useState(defaultCh);
-    var channel = sch[0];
-    var setChannel = sch[1];
-    var stab = useState("form");
-    var tab = stab[0];
-    var setTab = stab[1];
-    var ss = useState(false);
-    var sent = ss[0];
-    var setSent = ss[1];
+    var se=useState(""); var email=se[0]; var setEmail=se[1];
+    var sn=useState(""); var name=sn[0]; var setName=sn[1];
+    var sb=useState(defaultBody); var body=sb[0]; var setBody=sb[1];
+    var ssb=useState(defaultSubj); var subject=ssb[0]; var setSubject=ssb[1];
+    var sch=useState(defaultCh); var channel=sch[0]; var setChannel=sch[1];
+    var stab=useState("form"); var tab=stab[0]; var setTab=stab[1];
+    var ss=useState(false); var sent=ss[0]; var setSent=ss[1];
     var CHANNELS = [{ v: "mail", l: "✉️ Mail" }, { v: "sms", l: "📱 SMS" }, { v: "begge", l: "📲 Begge" }];
     function fillPlaceholders(txt) { return txt.replace(/\[NAVN\]/g, name || "Repr.").replace(/\[KLASSE\]/g, ctx.className).replace(/\[SKOLE\]/g, ctx.schoolName).replace(/\[LINK\]/g, "https://clsplus.dk/login").replace(/\[DATO\]/g, "10. mar 2026"); }
     function send() { if (!email.trim())
@@ -1730,17 +1651,29 @@ function NyAargangModal(_a) {
     var school = _a.school, onSave = _a.onSave, onClose = _a.onClose;
     var existing = school.cohorts.map(function (c) { return c.year; });
     var nextY = Math.max.apply(null, existing.concat([2025])) + 1;
-    var sy = useState(String(nextY));
-    var year = sy[0];
-    var setYear = sy[1];
-    var sc = useState("3A,3B,3C");
-    var classes = sc[0];
-    var setClasses = sc[1];
-    var sp = useState(["Studenterhue"]);
-    var prods = sp[0];
-    var setProds = sp[1];
+    var sy=useState(String(nextY)); var year=sy[0]; var setYear=sy[1];
+    var sk = useState("");
+    var kopierFra = sk[0]; var setKopierFra = sk[1];
+    // Default classes: copy from selected cohort or use 3A,3B,3C
+    var defaultClasses = "3A,3B,3C";
+    var sc=useState(defaultClasses); var classes=sc[0]; var setClasses=sc[1];
+    var sp=useState(["Studenterhue"]); var prods=sp[0]; var setProds=sp[1];
     var yr = parseInt(year);
     var conflict = existing.includes(yr);
+    function handleKopierFra(val) {
+        setKopierFra(val);
+        if (val) {
+            var srcCohort = school.cohorts.find(function(c){ return String(c.year)===val; });
+            if (srcCohort && srcCohort.classes && srcCohort.classes.length > 0) {
+                setClasses(srcCohort.classes.map(function(cl){return cl.name;}).join(","));
+                if (srcCohort.classes[0] && srcCohort.classes[0].products && srcCohort.classes[0].products.length > 0) {
+                    setProds(srcCohort.classes[0].products);
+                }
+            }
+        } else {
+            setClasses("3A,3B,3C");
+        }
+    }
     function toggleP(p) { setProds(function (prev) { return prev.includes(p) ? prev.filter(function (x) { return x !== p; }) : [].concat(prev, [p]); }); }
     function save() { if (!yr || conflict)
         return; onSave(yr, classes.split(",").map(function (s) { return s.trim(); }).filter(Boolean), prods); onClose(); }
@@ -1751,7 +1684,15 @@ function NyAargangModal(_a) {
                 school.name)),
         React.createElement("div", { style: { padding: "14px 22px" } },
             React.createElement(FInput, { label: "\u00C5rstal", value: year, onChange: setYear, placeholder: "fx 2027", required: true }),
-            React.createElement(FInput, { label: "Klasser (kommasepareret)", value: classes, onChange: setClasses, placeholder: "3A,3B,3C" }),
+
+            school.cohorts.length > 0 && React.createElement("div", { style: { marginBottom: 12 } },
+                React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: MTD, textTransform: "uppercase", marginBottom: 4 } }, "Kopier klasser fra eksisterende \u00e5rgang"),
+                React.createElement("select", { value: kopierFra, onChange: function(e){ handleKopierFra(e.target.value); },
+                    style: { width: "100%", padding: "9px 12px", borderRadius: 5, border: "1px solid "+BRD, fontSize: 13, fontFamily: "inherit", background: SFC } },
+                    React.createElement("option", { value: "" }, "\u2014 Opret med tomme klasser"),
+                    school.cohorts.map(function(c){ return React.createElement("option", { key: c.year, value: String(c.year) }, "Kopier fra "+c.year+" ("+c.classes.length+" klasser)"); }))),
+            React.createElement(FInput, { label: "Klasser"+(kopierFra ? " (kopieret fra "+kopierFra+")" : "")+(", kommasepareret"), value: classes, onChange: setClasses, placeholder: "3A,3B,3C" }),
+
             React.createElement("div", { style: { marginBottom: 12 } },
                 React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: MTD, textTransform: "uppercase", letterSpacing: .7, marginBottom: 8 } }, "Produkter"),
                 React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, PRODUKTER.map(function (p) { return React.createElement("button", { key: p, onClick: function () { toggleP(p); }, style: { padding: "4px 12px", borderRadius: 20, border: "1.5px solid " + (prods.includes(p) ? NAVY : BRD), background: prods.includes(p) ? NAVY : "transparent", color: prods.includes(p) ? "#fff" : MTD, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, p); }))),
@@ -1763,15 +1704,11 @@ function NyAargangModal(_a) {
             React.createElement("button", { onClick: onClose, style: { padding: "8px 18px", borderRadius: 5, border: "1px solid " + BRD, background: "transparent", color: MTD, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, "Annuller"),
             React.createElement("button", { onClick: save, disabled: conflict, style: { padding: "8px 18px", borderRadius: 5, border: "none", background: conflict ? "#C0BDB7" : NAVY, color: "#fff", fontSize: 13, fontWeight: 600, cursor: conflict ? "not-allowed" : "pointer", fontFamily: "inherit" } }, "Opret"))));
 }
-//  NAV 
-var PAGES = {
-    admin: ["dashboard", "skoler", "kalender", "kommunikation", "traditioner", "rapporter", "indstillinger", "guides", "opgaver"],
-    saelger: ["dashboard", "skoler", "kalender", "kommunikation", "traditioner", "rapporter", "guides", "opgaver"],
-    internsalg: ["dashboard", "skoler", "kalender", "kommunikation", "rapporter", "guides"],
-    repr: ["dashboard", "minskole", "kommunikation", "guides"],
-};
+//  NAV
 var PLBL = { dashboard: "Dashboard", skoler: "Skoler", opgaver: "Opgaver", kalender: "Kalender", traditioner: "Aftaler", kommunikation: "Kommunikation", rapporter: "Rapporter", indstillinger: "Indstillinger", guides: "Guides", minskole: "Min skole" };
-var PICONS = { dashboard: "⊞", skoler: "⌂", opgaver: "✅", pipeline: "◈", kalender: "📅", traditioner: "🤝", kommunikation: "✉", rapporter: "▦", indstillinger: "⚙", guides: "▤", minskole: "⌂" };
+var PICONS = { dashboard: "⊞", skoler: "🏫", opgaver: "✅", kalender: "📅", traditioner: "🤝", kommunikation: "✉", rapporter: "📊", indstillinger: "⚙", guides: "📖", minskole: "🏫" };
+
+// ─── NAVIGATION ─────────────────────────────────────────────────
 function Sidebar(_a) {
     var user=_a.user,page=_a.page,go=_a.go,logout=_a.logout,notifCount=_a.notifCount,sagCount=_a.sagCount,opgaveCount=_a.opgaveCount,overdueTasks=_a.overdueTasks;
     var items=getRolePages(user.role);
@@ -1850,11 +1787,11 @@ function Topbar(_a) {
                 React.createElement("span",{style:{fontSize:12,fontWeight:600,color:TXT}},user.name.split(" ")[0]))));
 }
 
+
+// ─── SEARCH ──────────────────────────────────────────────────────
 function GlobalSearch(_a) {
     var posts2 = _a.posts||[]; var onNavigate = _a.onNavigate, onClose = _a.onClose, schools = _a.schools, pipeline = _a.pipeline, activity = _a.activity;
-    var sq = useState("");
-    var q = sq[0];
-    var setQ = sq[1];
+    var sq=useState(""); var q=sq[0]; var setQ=sq[1];
     var inp = useRef(null);
     useEffect(function () { if (inp.current)
         inp.current.focus(); }, []);
@@ -1921,24 +1858,19 @@ function Dashboard(_a) {
     var isAdmin = can(user, "settings");
     var isRepr = !can(user, "pipeline");
     var today = new Date().toISOString().split("T")[0];
-    // ── derive my schools ─────────────────────────────────────────────────────
     var mySchoolIds = isAdmin
         ? schools.map(function (s) { return s.id; })
         : schools.filter(function (s) { return (assignments[s.id] || []).includes(user.id); }).map(function (s) { return s.id; });
     var mySchools = schools.filter(function (s) { return mySchoolIds.includes(s.id); });
-    // ── KPIs ──────────────────────────────────────────────────────────────────
     var totalRev = mySchools.reduce(function (a, s) { return a + s.cohorts.filter(function (c) { return c.status === "active"; }).reduce(function (b, c) { return b + (c.classes || []).reduce(function (d, cl) { return d + (cl.rev || 0); }, 0); }, 0); }, 0);
     var totalOrders = mySchools.reduce(function (a, s) { return a + s.cohorts.filter(function (c) { return c.status === "active"; }).reduce(function (b, c) { return b + (c.classes || []).reduce(function (d, cl) { return d + (cl.orders || 0); }, 0); }, 0); }, 0);
     var allClasses = [];
     mySchools.forEach(function (s) { s.cohorts.filter(function (c) { return c.status === "active"; }).forEach(function (c) { (c.classes || []).forEach(function (cl) { allClasses.push(Object.assign({}, cl, { schoolId: s.id, schoolName: s.name, cohortId: c.id, year: c.year })); }); }); });
     var clsWithRepr = allClasses.filter(function (cl) { return cl.repr1 || cl.repr2; }).length;
     var clsWithoutRepr = allClasses.filter(function (cl) { return !cl.repr1 && !cl.repr2; });
-    // ── my tasks ──────────────────────────────────────────────────────────────
     var myTasks = (activity || []).filter(function (a) { return a.type === "task" && a.status !== "done" && (isAdmin || a.assignedTo === user.id); }).sort(function (a, b) { return (a.deadline || "9999").localeCompare(b.deadline || "9999"); });
     var overdueTasks = myTasks.filter(function (t) { return t.deadline && t.deadline < today; });
-    // ── upcoming meetings ─────────────────────────────────────────────────────
     var todaysMeetings = (activity||[]).filter(function(a){return a.type==="meeting"&&(a.deadline===today||a.createdAt&&a.createdAt.slice(0,10)===today)&&(isAdmin||(mySchools||[]).some(function(s){return s.id===a.schoolId;}));});
-    var todaysMeetings=(activity||[]).filter(function(a){return a.type==="meeting"&&(a.deadline===today||a.createdAt&&a.createdAt.slice(0,10)===today)&&(isAdmin||(mySchools||[]).some(function(s){return s.id===a.schoolId;}));});
     var upcomingMeetings = (activity || []).filter(function (a) { return a.type === "meeting" && a.deadline && a.deadline >= today && (isAdmin || a.assignedTo === user.id); }).sort(function (a, b) { return a.deadline.localeCompare(b.deadline); }).slice(0, 5);
     // ── schools at risk: no active classes or stalled pipeline ────────────────
     var atRisk = mySchools.filter(function (s) {
@@ -1961,7 +1893,6 @@ function Dashboard(_a) {
         });
         salesByStaff.sort(function (a, b) { return b.rev - a.rev; });
     }
-    // ── repr dashboard ────────────────────────────────────────────────────────
     if (isRepr) {
         var mySchool = schools.find(function (s) { return s.id === user.schoolId; });
         var myCohort = mySchool && mySchool.cohorts.find(function (c) { return c.id === user.cohortId; });
@@ -2028,11 +1959,11 @@ function Dashboard(_a) {
             React.createElement(KPI, { label: isAdmin ? "Alle skoler" : "Mine skoler", value: mySchools.length, icon: "\uD83C\uDFEB" }),
             React.createElement(KPI, { label: "Klasser u. repr.", value: clsWithoutRepr.length, icon: "\u26A0\uFE0F", alert: clsWithoutRepr.length > 0 }),
             isAdmin && React.createElement(KPI, { label: "Skoler i risiko", value: atRisk.length, icon: "\uD83D\uDD34", alert: atRisk.length > 0 }),
-            !isAdmin && React.createElement(KPI, { label: "Aabne opgaver", value: myTasks.length, icon: "\u2705", alert: overdueTasks.length > 0 })),
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: isAdmin ? "1fr 1fr" : "2fr 1fr", gap: 18 } },
+            !isAdmin && React.createElement(KPI, { label: "Åbne opgaver", value: myTasks.length, icon: "\u2705", alert: overdueTasks.length > 0 })),
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: isAdmin ? "3fr 2fr" : "2fr 1fr", gap: 18 } }),
             React.createElement("div", null,
                 isAdmin && salesByStaff.length > 0 && (React.createElement(Card, { style: { marginBottom: 16 } },
-                    React.createElement(STitle, { sub: "Omsaetning fordelt pa saelgere" }, "Saelgere"),
+                    React.createElement(STitle, { sub: "Omsætning fordelt på sælgere" }, "Sælgere"),
                     salesByStaff.map(function (s) {
                         var pct = totalRev > 0 ? Math.round(s.rev / totalRev * 100) : 0;
                         return (React.createElement("div", { key: s.id, style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 10 } },
@@ -2097,7 +2028,7 @@ function Dashboard(_a) {
                             React.createElement("div",{style:{fontSize:12,color:RED,opacity:.8}},"Klik for at se i Pipeline")),
                         React.createElement("span",{style:{fontSize:18,color:RED}},"›"))),
                 atRisk.length > 0 && (React.createElement(Card, { style: { border: "1px solid " + RED + "40", marginBottom: 16 } },
-                    React.createElement(STitle, { sub: "Skoler der kraever opfoelgning" },
+                    React.createElement(STitle, { sub: "Skoler der kræver opfølgning" },
                         "Skoler i risiko (",
                         atRisk.length,
                         ")"),
@@ -2167,16 +2098,8 @@ function Dashboard(_a) {
                                 React.createElement("div",{style:{fontSize:13,fontWeight:600,color:TXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},m.title),
                                 React.createElement("div",{style:{fontSize:11,color:MTD}},(sc?sc.name:"")+(m.meetingTime?" \u00b7 kl. "+m.meetingTime:""))));
                     })),
-todaysMeetings.length>0&&React.createElement(Card,{style:{marginBottom:16,border:"2px solid "+NAVY}},
-                    React.createElement(STitle,{sub:"I dag"},"\uD83D\uDCCB Dagens m\u00f8der"),
-                    todaysMeetings.map(function(m){var sc=schools.find(function(s){return s.id===m.schoolId;});
-                        return React.createElement("div",{key:m.id,style:{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid "+BRD}},
-                            React.createElement("div",{style:{fontSize:20,width:28}},"\uD83E\uDD1D"),
-                            React.createElement("div",{style:{flex:1,minWidth:0}},
-                                React.createElement("div",{style:{fontSize:13,fontWeight:600,color:TXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},m.title),
-                                React.createElement("div",{style:{fontSize:11,color:MTD}},(sc?sc.name:"")+(m.meetingTime?" \u00b7 kl. "+m.meetingTime:""))));})),
 React.createElement(Card, { style: { marginBottom: 16 } },
-                    React.createElement(STitle, { sub: upcomingMeetings.length + " planlagte" }, "Kommende moeder"),
+                    React.createElement(STitle, { sub: upcomingMeetings.length + " planlagte" }, "Kommende møder"),
                     upcomingMeetings.length === 0 && React.createElement("div", { style: { fontSize: 12, color: MTD, textAlign: "center", padding: "12px 0" } }, "Ingen planlagte moeder"),
                     upcomingMeetings.map(function (m) {
                         var sc = schools.find(function (s) { return s.id === m.schoolId; });
@@ -2189,7 +2112,7 @@ React.createElement(Card, { style: { marginBottom: 16 } },
                                 sc && React.createElement("div", { style: { fontSize: 10, color: MTD } }, sc.name))));
                     })),
                 clsWithoutRepr.length > 0 && (React.createElement(Card, null,
-                    React.createElement(STitle, { sub: clsWithoutRepr.length + " klasser" }, "Mangler klasserepraes."),
+                    React.createElement(STitle, { sub: clsWithoutRepr.length + " klasser" }, "Mangler klasserepræsentant"),
                     clsWithoutRepr.slice(0, 5).map(function (cl) {
                         return (React.createElement("div", { key: cl.classId || cl.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid " + BRD } },
                             React.createElement("div", null,
@@ -2200,7 +2123,7 @@ React.createElement(Card, { style: { marginBottom: 16 } },
                     clsWithoutRepr.length > 5 && React.createElement("div", { style: { fontSize: 11, color: MTD, textAlign: "center", paddingTop: 6 } },
                         "+",
                         clsWithoutRepr.length - 5,
-                        " flere")))))));
+                        " flere"))))));
 }
 function MinSkole(_a) {
     var user = _a.user, schools = _a.schools, events = _a.events, elever = _a.elever, setElever = _a.setElever,
@@ -2496,7 +2419,7 @@ function MinSkole(_a) {
                     })))));
 }
 
-//  REPR BOX 
+//  REPR BOX
 function ReprBox(_a) {
     var repr = _a.repr, slot = _a.slot, schoolName = _a.schoolName, year = _a.year, className = _a.className, canEdit = _a.canEdit, onInvite = _a.onInvite, onClickRepr = _a.onClickRepr;
     if (!repr)
@@ -2516,24 +2439,14 @@ function ReprBox(_a) {
             React.createElement("div", { style: { fontSize: 12, fontWeight: 600, color: TXT, lineHeight: 1.2 } }, repr.name),
             React.createElement("div", { style: { fontSize: 10, color: repr.active ? GREEN : RED, fontWeight: 600 } }, repr.active ? "Aktiv" : "Afventer"))));
 }
-//  SKOLE INFO MODAL 
+//  SKOLE INFO MODAL
 function SkoleInfoModal(_a) {
     var school = _a.school, onSave = _a.onSave, onClose = _a.onClose, canEdit = _a.canEdit, customFilters = _a.customFilters, setCustomFilters = _a.setCustomFilters;
-    var sps = useState(school.procesStatus || "Invited");
-    var procesStatus = sps[0];
-    var setProcStatus = sps[1];
-    var sc = useState(school.contacts || []);
-    var contacts = sc[0];
-    var setContacts = sc[1];
-    var sd = useState(school.delivery || { address: "", notes: "" });
-    var delivery = sd[0];
-    var setDelivery = sd[1];
-    var sl = useState(school.logoUrl || "");
-    var logoUrl = sl[0];
-    var setLogoUrl = sl[1];
-    var sf = useState(school.customFields || []);
-    var fields = sf[0];
-    var setFields = sf[1];
+    var sps=useState(school.procesStatus || "Invited"); var procesStatus=sps[0]; var setProcStatus=sps[1];
+    var sc=useState(school.contacts || []); var contacts=sc[0]; var setContacts=sc[1];
+    var sd=useState(school.delivery || { address: "", notes: "" }); var delivery=sd[0]; var setDelivery=sd[1];
+    var sl=useState(school.logoUrl || ""); var logoUrl=sl[0]; var setLogoUrl=sl[1];
+    var sf=useState(school.customFields || []); var fields=sf[0]; var setFields=sf[1];
     var tab = useState("kontakter");
     var activeTab = tab[0];
     var setTab = tab[1];
@@ -2677,33 +2590,21 @@ function SkoleInfoModal(_a) {
             React.createElement("button", { onClick: onClose, style: { padding: "8px 18px", borderRadius: 5, border: "1px solid " + BRD, background: "transparent", color: MTD, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, canEdit ? "Annuller" : "Luk"),
             canEdit && React.createElement("button", { onClick: save, style: { padding: "8px 18px", borderRadius: 5, border: "none", background: NAVY, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "Gem \u00E6ndringer"))));
 }
-//  COHORT DETAIL MODAL 
+//  COHORT DETAIL MODAL
+
+// ─── COHORT DETAIL MODAL ────────────────────────────────────────
 function CohortDetailModal(_a) {
     var activity = _a.activity||[]; var schools = _a.schools||[]; var school = _a.school, cohort = _a.cohort, canEdit = _a.canEdit, onSave = _a.onSave, setActivity = _a.setActivity||null, setEvents = _a.setEvents||null, cdmStaff = _a.staff||[], cdmUser = _a.user||{},
         setActivity = _a.setActivity||null, setEvents = _a.setEvents||null, cdmStaff = _a.staff||[], cdmUser = _a.user||{}, onClose = _a.onClose, inline = _a.inline, customKonkurrenter = _a.customKonkurrenter, modeskabeloner = _a.modeskabeloner, konkurrentProfiler = _a.konkurrentProfiler, modeProfiler = _a.modeProfiler;
     if (!cohort) return null;
     var cd = cohort.contract || { type: "Tilbud sendt", approvedBy: "", status: "Not decided", gdprSigned: false, gdprDate: "", contractFile: "" };
-    var sc = useState(cd);
-    var contract = sc[0];
-    var setContract = sc[1];
-    var sk = useState(cohort.konkurrenter || []);
-    var konk = sk[0];
-    var setKonk = sk[1];
-    var st = useState(cohort.trad || { hue: { aktiv: false, opmaalingTid: "", betalingsFrist: "", leveringsMaaned: "", ekstraNotes: "" }, stoej: { aktiv: false, afrejse: "", provetojSendt: false, provetojSendtTil: "", provetojSendtDato: "", proevetojNotes: "", ekstraNotes: "" }, blaabog: { aktiv: false, korrekturAnsvar: "Elever", typiskOplage: 0, deadline: "", ekstraNotes: "" }, koersel: { aktiv: false, typiskAntal: 0, ruteNotes: "", tidspunkt: "", ekstraNotes: "" } });
-    var trad = st[0];
-    var setTrad = st[1];
-    var stb = useState("kontrakt");
-    var tab = stb[0];
-    var setTab = stb[1];
-    var smo = useState(cohort.moeder || []);
-    var moeder = smo[0];
-    var setMoeder = smo[1];
-    var smv = useState({ dato: "", tidFra: "", tidTil: "", type: "", noter: "" });
-    var nytModeVal = smv[0];
-    var setNytModeVal = smv[1];
-    var smshow = useState(false);
-    var visNytMode = smshow[0];
-    var setVisNytMode = smshow[1];
+    var sc=useState(cd); var contract=sc[0]; var setContract=sc[1];
+    var sk=useState(cohort.konkurrenter || []); var konk=sk[0]; var setKonk=sk[1];
+    var st=useState(cohort.trad || { hue: { aktiv: false, opmaalingTid: "", betalingsFrist: "", leveringsMaaned: "", ekstraNotes: "" }, stoej: { aktiv: false, afrejse: "", provetojSendt: false, provetojSendtTil: "", provetojSendtDato: "", proevetojNotes: "", ekstraNotes: "" }, blaabog: { aktiv: false, korrekturAnsvar: "Elever", typiskOplage: 0, deadline: "", ekstraNotes: "" }, koersel: { aktiv: false, typiskAntal: 0, ruteNotes: "", tidspunkt: "", ekstraNotes: "" } }); var trad=st[0]; var setTrad=st[1];
+    var stb=useState("kontrakt"); var tab=stb[0]; var setTab=stb[1];
+    var smo=useState(cohort.moeder || []); var moeder=smo[0]; var setMoeder=smo[1];
+    var smv=useState({ dato: "", tidFra: "", tidTil: "", type: "", noter: "" }); var nytModeVal=smv[0]; var setNytModeVal=smv[1];
+    var smshow=useState(false); var visNytMode=smshow[0]; var setVisNytMode=smshow[1];
     var smid = useRef(Date.now() + 200);
     var nid = useRef(Date.now());
     var iS = { width: "100%", padding: "9px 12px", borderRadius: 5, border: "1px solid " + BRD, fontSize: 13, fontFamily: "'DM Sans',sans-serif", color: TXT, outline: "none", boxSizing: "border-box" };
@@ -2729,7 +2630,7 @@ function CohortDetailModal(_a) {
     var cCol = cStatus === "Tilbud godkendt" ? { c: GREEN, bg: GBGN } : { c: GOLD, bg: GOLDBG };
     var TABS = [{ key: "kontrakt", label: "📝 Kontrakt" }, { key: "konkurrenter", label: "⚔️ Konkurrenter" }, { key: "moeder", label: "📅 Møder" }, { key: "traditioner", label: "★ Traditioner" }];
     var inlineStyle = { background: SFC, borderRadius: 12, border: "1px solid " + BRD, overflow: "hidden" };
-    var Wrap = inline ? function (p) { return React.createElement("div", { style: inlineStyle }, p.children); } : function (p) { return React.createElement(Modal, { onClose: onClose, wide: true }, p.children); };
+    var Wrap = inline ? function (p) { return React.createElement("div", null, p.children); } : function (p) { return React.createElement(Modal, { onClose: onClose, wide: true }, p.children); };
     return (React.createElement(Wrap, null,
         React.createElement("div", { style: { padding: "14px 22px", borderBottom: "1px solid " + BRD } },
             React.createElement("div", { style: { fontSize: 16, fontWeight: 700, color: TXT, fontFamily: "'Playfair Display',serif" } },
@@ -3062,13 +2963,11 @@ React.createElement("div",null,
         inline && canEdit && React.createElement("div", { style: { padding: "12px 22px", borderTop: "1px solid " + BRD, display: "flex", justifyContent: "flex-end" } },
             React.createElement("button", { onClick: save, style: { padding: "8px 18px", borderRadius: 5, border: "none", background: NAVY, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "Gem \u00E6ndringer")))));
 }
-//  KLASSE NOTE MODAL 
+//  KLASSE NOTE MODAL
 function ClassNoteModal(_a) {
     var school = _a.school, cohort = _a.cohort, cls = _a.cls, classNotes = _a.classNotes, setClassNotes = _a.setClassNotes, onClose = _a.onClose;
     var existing = classNotes[cls.id] || {};
-    var sn = useState(existing);
-    var notes = sn[0];
-    var setNotes = sn[1];
+    var sn=useState(existing); var notes=sn[0]; var setNotes=sn[1];
     var PRODS = ["Studenterhue", "Blåbog", "Studieturstøj", "Studenterkørsel"];
     var PROD_STATUS_OPTS = ["Potentiel", "Bekræftet interesse", "Tilbud sendt", "Tabt til konkurrent", "Ikke relevant"];
     var PROD_COL2 = { "Potentiel": { c: MTD, bg: "#F0EDE8" }, "Bekræftet interesse": { c: BLUE, bg: BLUEBG }, "Tilbud sendt": { c: GOLD, bg: GOLDBG }, "Tabt til konkurrent": { c: RED, bg: REDBG }, "Ikke relevant": { c: MTD, bg: "#EEEBE6" } };
@@ -3114,7 +3013,9 @@ function ClassNoteModal(_a) {
             React.createElement("button", { onClick: onClose, style: { padding: "8px 18px", borderRadius: 5, border: "1px solid " + BRD, background: "transparent", color: MTD, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, "Annuller"),
             React.createElement("button", { onClick: save, style: { padding: "8px 18px", borderRadius: 5, border: "none", background: NAVY, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "Gem"))));
 }
-//  SKOLER 
+//  SKOLER
+
+// ─── SKOLER COMPONENTS ─────────────────────────────────────────
 function AccordionSection(_a) {
     var title=_a.title, children=_a.children;
     var defaultOpen=_a.defaultOpen!==undefined?_a.defaultOpen:false;
@@ -3174,8 +3075,10 @@ function Skoler(_a) {
     var _si=useState(null); var showInactiveFilter=_si[0];
     var _bulk=useState([]); var bulkSel=_bulk[0]; var setBulkSel=_bulk[1];
     var _hl=useState(false); var hideLost=_hl[0]; var setHideLost=_hl[1];
+    var _sq=useState(""); var searchQ=_sq[0]; var setSearchQ=_sq[1];
     var _toast=useState(null); var toast=_toast[0]; var setToast=_toast[1];
     var _cst=useState("aktivitet"); var cohSubTab=_cst[0]; var setCohSubTab=_cst[1];
+    var _ek=useState(null); var editKlasse=_ek[0]; var setEditKlasse=_ek[1];
     var _cohTab=useState({}); var cohTabMem=_cohTab[0]; var setCohTabMem=_cohTab[1];
     function setSubTab(v){ setCohSubTab(v); setCohTabMem(function(p){ return Object.assign({},p,{[sel]:v}); }); }
     var _cv=useState("liste"); var calView=_cv[0]; var setCalView=_cv[1];
@@ -3198,6 +3101,7 @@ function Skoler(_a) {
 
     var filteredSchools = baseSchools;
     if(hideLost){filteredSchools=filteredSchools.filter(function(s){return (s.procesStatus||"")!=="Lost";});}
+    if(searchQ.trim()){var sq=searchQ.trim().toLowerCase();filteredSchools=filteredSchools.filter(function(s){return (s.name||"").toLowerCase().includes(sq)||(s.city||"").toLowerCase().includes(sq);});}
     if (saelgerFilter) {
         if (saelgerFilter.type === "staff") {
             filteredSchools = filteredSchools.filter(function(s){
@@ -3253,9 +3157,9 @@ function Skoler(_a) {
             setNyKlasse(null); showToastMsg("Klasse oprettet");
         }, onClose:function(){setNyKlasse(null);}}),
         invCtx && React.createElement(InviteModal, {ctx:invCtx, onClose:function(){setInvCtx(null);}, templates:templates}),
-        reprDetalje && React.createElement(ReprDetaljeModal, {repr:reprDetalje.repr, slot:reprDetalje.slot, school:reprDetalje.school, cohort:reprDetalje.cohort, cls:reprDetalje.cls, canEdit:canEdit, onClose:function(){setReprDetalje(null);}, updateSchool:updateSchool}),
+        reprDetalje && React.createElement(ReprDetaljeModal, {repr:reprDetalje.repr, slot:reprDetalje.slot, school:reprDetalje.school, cohort:reprDetalje.cohort, cls:reprDetalje.cls, canEdit:canEdit, onRemove:function(){}, onClose:function(){setReprDetalje(null);}, updateSchool:updateSchool}),
         detaljer && school && React.createElement(SkoleInfoModal, {school:school, onSave:function(d){updateSchool(school.id,d); setDetaljer(false);}, onClose:function(){setDetaljer(false);}}),
-        opgaveModal && React.createElement(OpgaveModal, {schools:schools, onSave:addOpgave, onClose:function(){setOpgaveModal(false);}}),
+        opgaveModal && React.createElement(OpgaveModal, {schools:schools, user:user, staff:staff, onSave:addOpgave, onClose:function(){setOpgaveModal(false);}}),
         clsNoteModal && React.createElement(ClassNoteModal, {school:clsNoteModal.school, cohort:clsNoteModal.cohort, cls:clsNoteModal.cls, classNotes:classNotes, setClassNotes:setClassNotes, onClose:function(){setClsNoteModal(null);}}),
         noteEdit && school && React.createElement(Modal, {onClose:function(){setNoteEdit(false);}},
             React.createElement("div", {style:{padding:"16px 22px", borderBottom:"1px solid "+BRD}},
@@ -3271,6 +3175,7 @@ function Skoler(_a) {
             React.createElement("h1", {style:{fontSize:22, fontWeight:700, color:TXT, margin:0, fontFamily:"'Playfair Display',serif"}}, "Skoler"),
             React.createElement("div", {style:{display:"flex", gap:8}},
                 tab==="skoler" && canEdit && React.createElement("button", {onClick:function(){setOpgaveModal(true);}, style:{padding:"7px 14px", borderRadius:5, border:"1px solid "+BRD, background:SFC, fontSize:12, cursor:"pointer", color:TXT}}, "+ Opgave"),
+                tab==="skoler" && React.createElement("button", {onClick:function(){exportToCsv(schools, activity);}, style:{padding:"7px 14px", borderRadius:5, border:"1px solid "+BRD, background:SFC, fontSize:12, cursor:"pointer", color:TXT}}, "⬇ Eksport CSV"),
                 tab==="skoler" && canEdit && React.createElement("button", {onClick:function(){setNySkole(true);}, style:{padding:"7px 14px", borderRadius:5, border:"none", background:NAVY, color:"#fff", fontSize:12, cursor:"pointer", fontWeight:600}}, "+ Ny skole"))),
 
         // — tab bar —
@@ -3297,6 +3202,15 @@ function Skoler(_a) {
                     React.createElement("button", {onClick:function(){setBulkSel([]);}, style:{marginLeft:"auto", padding:"2px 8px", borderRadius:6, border:"1px solid rgba(255,255,255,.3)", background:"transparent", color:"#fff", fontSize:10, cursor:"pointer"}}, "× Annuller")),
 
                 // School cards
+                React.createElement("div", {style:{position:"relative", marginBottom:8}},
+                    React.createElement("input", {
+                        type:"text", placeholder:"Søg skoler...", value:searchQ,
+                        onChange:function(e){setSearchQ(e.target.value);},
+                        style:{width:"100%", padding:"8px 12px 8px 32px", borderRadius:7, border:"1px solid "+BRD,
+                            fontSize:13, fontFamily:"inherit", background:SFC, boxSizing:"border-box",
+                            outline:"none"}}),
+                    React.createElement("span", {style:{position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", fontSize:13, color:MTD, pointerEvents:"none"}}, "🔍"),
+                    searchQ && React.createElement("button", {onClick:function(){setSearchQ("");}, style:{position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", border:"none", background:"transparent", cursor:"pointer", color:MTD, fontSize:14, lineHeight:1}}, "×")),
                 React.createElement("div", {style:{display:"flex", flexDirection:"column", gap:6}},
                     filteredSchools.length===0 && React.createElement("div", {style:{textAlign:"center", padding:"40px 0", color:MTD, fontSize:13}}, "Ingen skoler"),
                     filteredSchools.map(function(s){
@@ -3330,7 +3244,7 @@ function Skoler(_a) {
                     }))),
 
             // Right: school detail
-            React.createElement("div", null,
+            React.createElement("div", {style:{minWidth:0}},
                 !school
                     ? React.createElement("div", {style:{textAlign:"center", padding:"60px 20px", color:MTD}},
                         React.createElement("div", {style:{fontSize:36, marginBottom:12}}, "\uD83C\uDFEB"),
@@ -3368,60 +3282,101 @@ function Skoler(_a) {
                                     React.createElement("button", {onClick:function(){setShowArch(true);}, style:{padding:"4px 12px", borderRadius:12, border:"1px solid "+BRD, background:showArch?NAVY:SFC, color:showArch?"#fff":MTD, fontSize:11, cursor:"pointer"}}, "Alle årgange"),
                                 cohs.map(function(co){
                                     var isOpen = openCoh===co.id;
-                                    return React.createElement("div", {key:co.id, style:{marginBottom:16, border:"1px solid "+BRD, borderRadius:12, overflow:"hidden"}},
-                                        React.createElement("div", {
-                                            onClick:function(){setOpenCoh(isOpen?null:co.id);},
-                                            style:{padding:"12px 16px", background:isOpen?NAVY:SFC, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center"}},
-                                            React.createElement("div", {style:{fontSize:15, fontWeight:700, color:isOpen?"#fff":TXT, fontFamily:"'Playfair Display',serif"}},
+                                    return React.createElement("div", {key:co.id,
+                                        style:{marginBottom:6, border:"1px solid "+(isOpen?NAVY:BRD), borderRadius:8, background:isOpen?NAVY:SFC, cursor:"pointer"},
+                                        onClick:function(){setOpenCoh(isOpen?null:co.id); if(!isOpen) setCohSubTab(cohTabMem[school.id]||"aktivitet");}},
+                                        React.createElement("div", {style:{padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center"}},
+                                            React.createElement("div", {style:{fontSize:14, fontWeight:700, color:isOpen?"#fff":TXT, fontFamily:"'Playfair Display',serif"}},
                                                 "Årgang ", co.year, " · ", (co.classes||[]).length, " klasser"),
-                                            React.createElement("span", {style:{color:isOpen?"#fff":MTD, fontSize:12}}, isOpen?"▲":"▼")),
-                                        isOpen && React.createElement("div", null,
-                                            React.createElement("div", {style:{display:"flex", borderBottom:"2px solid "+BRD, background:SFC}},
-                                                ["aktivitet","klasser","aarsoplysninger"].map(function(t){
-                                                    var lbl = t==="aktivitet"?"Aktivitet":t==="klasser"?"\uD83C\uDF93 Klasser":"\uD83D\uDCC4 \u00c5rsoplysninger";
-                                                    var on = cohSubTab===t;
-                                                    return React.createElement("button",{key:t,onClick:function(){setSubTab(t);},
-                                                        style:{padding:"10px 18px",border:"none",borderBottom:"3px solid "+(on?NAVY:"transparent"),
-                                                            background:"transparent",color:on?NAVY:MTD,fontWeight:on?700:400,
-                                                            fontSize:13,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}},lbl);
-                                                })),
-                                            cohSubTab==="aktivitet" && React.createElement(CohortAktivitetTab, {
-                                                school:school, co:co, user:user, canEdit:canEdit,
-                                                activity:activity, setActivity:setActivity,
-                                                pipeline:pipeline, setPipeline:setPipeline,
-                                                templates:templates, setPosts:setPosts}),
-                                            cohSubTab==="klasser" && React.createElement("div", {style:{padding:"14px 16px"}},
-                                                React.createElement("div", {style:{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12}},
-                                                    React.createElement("div", {style:{fontSize:13, fontWeight:700, color:TXT}}, (co.classes||[]).length+" klasser"),
-                                                    canEdit && React.createElement("button", {onClick:function(){setNyKlasse(co);}, style:{padding:"5px 12px", borderRadius:5, border:"none", background:NAVY, color:"#fff", fontSize:12, cursor:"pointer"}}, "+ Ny klasse")),
-                                                (co.classes||[]).length===0
-                                                    ? React.createElement("div", {style:{textAlign:"center", padding:"20px", color:MTD, fontSize:13}}, "Ingen klasser endnu")
-                                                    : React.createElement("div", {style:{display:"flex", flexDirection:"column", gap:8}},
-                                                        (co.classes||[]).map(function(cl){
-                                                            return React.createElement("div", {key:cl.id, style:{background:"#F8F6F2", border:"1px solid "+BRD, borderRadius:8, padding:"12px 14px"}},
+                                            React.createElement("span", {style:{color:isOpen?"#fff":MTD, fontSize:12}}, isOpen?"▲":"▼")));
+                                }),
+                                openCoh && (function(){
+                                    var co = cohs.find(function(c){return c.id===openCoh;});
+                                    if (!co) return null;
+                                    return React.createElement("div", {style:{marginTop:12, display:"block", width:"100%"}},
+                                        React.createElement("div", {style:{display:"flex", borderBottom:"2px solid "+BRD, background:SFC}},
+                                            ["aktivitet","klasser","aarsoplysninger"].map(function(t){
+                                                var lbl = t==="aktivitet"?"Aktivitet":t==="klasser"?"🎓 Klasser":"📄 Årsoplysninger";
+                                                var on = cohSubTab===t;
+                                                return React.createElement("button",{key:t,onClick:function(e){e.stopPropagation();setSubTab(t);},
+                                                    style:{padding:"10px 18px",border:"none",borderBottom:"3px solid "+(on?NAVY:"transparent"),
+                                                        background:"transparent",color:on?NAVY:MTD,fontWeight:on?700:400,
+                                                        fontSize:13,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}},lbl);
+                                            })),
+                                        cohSubTab==="aktivitet" && React.createElement(CohortAktivitetTab, {
+                                            school:school, co:co, user:user, canEdit:canEdit,
+                                            activity:activity, setActivity:setActivity,
+                                            pipeline:pipeline, setPipeline:setPipeline,
+                                            templates:templates, setPosts:setPosts}),
+                                        cohSubTab==="klasser" && React.createElement("div", {style:{padding:"14px 16px", display:"block", width:"100%", boxSizing:"border-box", minHeight:300}},
+                                            React.createElement("div", {style:{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12}},
+                                                React.createElement("div", {style:{fontSize:13, fontWeight:700, color:TXT}}, (co.classes||[]).length+" klasser"),
+                                                canEdit && React.createElement("button", {onClick:function(e){e.stopPropagation();setNyKlasse(co);}, style:{padding:"5px 12px", borderRadius:5, border:"none", background:NAVY, color:"#fff", fontSize:12, cursor:"pointer"}}, "+ Ny klasse")),
+                                            (co.classes||[]).length===0
+                                                ? React.createElement("div", {style:{textAlign:"center", padding:"20px", color:MTD, fontSize:13}}, "Ingen klasser endnu")
+                                                : React.createElement("div", {style:{display:"flex", flexDirection:"column", gap:8}},
+                                                    (co.classes||[]).map(function(cl){
+                                                        var isEditing = editKlasse && editKlasse.id === cl.id;
+                                                        return React.createElement("div", {key:cl.id, style:{background:"#F8F6F2", border:"1px solid "+BRD, borderRadius:8, padding:"12px 14px"}},
+                                                            isEditing
+                                                            ? React.createElement("div", null,
+                                                                React.createElement("div", {style:{display:"flex", gap:8, marginBottom:8, flexWrap:"wrap"}},
+                                                                    React.createElement("div", {style:{flex:1}},
+                                                                        React.createElement("div", {style:{fontSize:11, fontWeight:700, color:MTD, marginBottom:3}}, "KLASSENAVN"),
+                                                                        React.createElement("input", {value:editKlasse.name, onChange:function(e){setEditKlasse(function(p){return Object.assign({},p,{name:e.target.value});});},
+                                                                            style:{width:"100%", padding:"7px 10px", borderRadius:5, border:"1px solid "+BRD, fontSize:13, fontFamily:"inherit"}})),
+                                                                    React.createElement("div", {style:{flex:1}},
+                                                                        React.createElement("div", {style:{fontSize:11, fontWeight:700, color:MTD, marginBottom:3}}, "ANTAL ELEVER"),
+                                                                        React.createElement("input", {type:"number", value:editKlasse.students||0, onChange:function(e){setEditKlasse(function(p){return Object.assign({},p,{students:parseInt(e.target.value)||0});});},
+                                                                            style:{width:"100%", padding:"7px 10px", borderRadius:5, border:"1px solid "+BRD, fontSize:13, fontFamily:"inherit"}}))),
+                                                                React.createElement("div", {style:{fontSize:11, fontWeight:700, color:MTD, marginBottom:3}}, "PRODUKTER"),
+                                                                React.createElement("div", {style:{display:"flex", gap:6, flexWrap:"wrap", marginBottom:10}},
+                                                                    PRODUKTER.map(function(p){
+                                                                        var on=(editKlasse.products||[]).includes(p);
+                                                                        return React.createElement("button", {key:p, onClick:function(){setEditKlasse(function(prev){var ps=prev.products||[];return Object.assign({},prev,{products:on?ps.filter(function(x){return x!==p;}):ps.concat([p])});});},
+                                                                            style:{padding:"3px 10px",borderRadius:12,border:"1px solid "+BRD,background:on?NAVY:SFC,color:on?"#fff":MTD,fontSize:11,cursor:"pointer"}},p);
+                                                                    })),
+                                                                React.createElement("div", {style:{display:"flex", gap:8, justifyContent:"flex-end"}},
+                                                                    React.createElement("button", {onClick:function(){setEditKlasse(null);}, style:{padding:"6px 14px", borderRadius:5, border:"1px solid "+BRD, background:SFC, fontSize:12, cursor:"pointer"}}, "Annuller"),
+                                                                    canEdit && React.createElement("button", {
+                                                                        onClick:function(){
+                                                                            if(window.confirm("Slet klasse "+cl.name+"? Dette kan ikke fortrydes.")){
+                                                                                updateSchool(school.id,{cohorts:school.cohorts.map(function(c){return c.id===co.id?Object.assign({},c,{classes:c.classes.filter(function(x){return x.id!==cl.id;})}):c;})});
+                                                                                setEditKlasse(null); showToastMsg(cl.name+" slettet");
+                                                                            }},
+                                                                        style:{padding:"6px 14px", borderRadius:5, border:"none", background:RED, color:"#fff", fontSize:12, cursor:"pointer"}}, "Slet klasse"),
+                                                                    React.createElement("button", {
+                                                                        onClick:function(){
+                                                                            updateSchool(school.id,{cohorts:school.cohorts.map(function(c){return c.id===co.id?Object.assign({},c,{classes:c.classes.map(function(x){return x.id===cl.id?Object.assign({},x,editKlasse):x;})}):c;})});
+                                                                            setEditKlasse(null); showToastMsg("Klasse gemt ✓");
+                                                                        },
+                                                                        style:{padding:"6px 14px", borderRadius:5, border:"none", background:NAVY, color:"#fff", fontSize:12, cursor:"pointer", fontWeight:600}}, "Gem")))
+                                                            : React.createElement("div", null,
                                                                 React.createElement("div", {style:{display:"flex", alignItems:"center", gap:8, marginBottom:8}},
                                                                     React.createElement("div", {style:{fontWeight:700, fontSize:14, color:TXT, flex:1}}, cl.name),
-                                                                    React.createElement("span", {style:{fontSize:11, color:MTD}}, (cl.students||0)+" elever")),
+                                                                    React.createElement("span", {style:{fontSize:11, color:MTD}}, (cl.students||0)+" elever"),
+                                                                    canEdit && React.createElement("button", {onClick:function(e){e.stopPropagation();setEditKlasse(Object.assign({},cl));}, style:{padding:"3px 8px", borderRadius:4, border:"1px solid "+BRD, background:SFC, fontSize:11, cursor:"pointer", color:MTD}}, "✏️ Rediger")),
                                                                 React.createElement("div", {style:{display:"flex", gap:8, flexWrap:"wrap", marginBottom:cl.products&&cl.products.length>0?8:0}},
                                                                     React.createElement(ReprBox, {repr:cl.repr1||null, slot:"1", schoolName:school.name, year:co.year, className:cl.name, canEdit:canEdit, onInvite:function(ctx){setInvCtx(Object.assign({},ctx,{schoolId:school.id,cohortId:co.id,classId:cl.id,slot:"repr1"}));}, onClickRepr:function(r,s){setReprDetalje({repr:r,slot:s,school:school,cohort:co,cls:cl});}}),
                                                                     React.createElement(ReprBox, {repr:cl.repr2||null, slot:"2", schoolName:school.name, year:co.year, className:cl.name, canEdit:canEdit, onInvite:function(ctx){setInvCtx(Object.assign({},ctx,{schoolId:school.id,cohortId:co.id,classId:cl.id,slot:"repr2"}));}, onClickRepr:function(r,s){setReprDetalje({repr:r,slot:s,school:school,cohort:co,cls:cl});}})),
                                                                 cl.products&&cl.products.length>0&&React.createElement("div", {style:{display:"flex", gap:4, flexWrap:"wrap"}},
-                                                                    cl.products.map(function(p){return React.createElement(Tag,{key:p,c:NAVY,bg:BLUEBG,small:true},p);})));
-                                                        }))),
-                                            cohSubTab==="aarsoplysninger" && React.createElement(CohortDetailModal, {
-                                                school:school, cohort:co, user:user, canEdit:canEdit, schools:schools,
-                                                inline:true,
-                                                activity:activity, setActivity:setActivity,
-                                                setEvents:setEvents,
-                                                templates:templates, posts:posts, setPosts:setPosts,
-                                                customKonkurrenter:customKonkurrenter,
-                                                konkurrentProfiler:konkurrentProfiler,
-                                                modeskabeloner:modeskabeloner,
-                                                classNotes:classNotes, setClassNotes:setClassNotes,
-                                                staff:staff,
-                                                onSave:function(d){updateSchool(school.id,{cohorts:school.cohorts.map(function(c){return c.id===co.id?Object.assign({},c,d):c;})});showToastMsg("\u00c5rsoplysninger gemt \u2713");},
-                                                 onClose:function(){}})))
-                                }),
+                                                                    cl.products.map(function(p){return React.createElement(Tag,{key:p,c:NAVY,bg:BLUEBG,small:true},p);}))));
+                                                    }))),
+                                        cohSubTab==="aarsoplysninger" && React.createElement("div", {style:{display:"block", width:"100%", minHeight:300}},
+                                        React.createElement(CohortDetailModal, {
+                                            school:school, cohort:co, user:user, canEdit:canEdit, schools:schools,
+                                            inline:true,
+                                            activity:activity, setActivity:setActivity,
+                                            setEvents:setEvents,
+                                            templates:templates, posts:posts, setPosts:setPosts,
+                                            customKonkurrenter:customKonkurrenter,
+                                            konkurrentProfiler:konkurrentProfiler,
+                                            modeskabeloner:modeskabeloner,
+                                            classNotes:classNotes, setClassNotes:setClassNotes,
+                                            staff:staff,
+                                            onSave:function(d){updateSchool(school.id,{cohorts:school.cohorts.map(function(c){return c.id===co.id?Object.assign({},c,d):c;})});showToastMsg("Årsoplysninger gemt ✓");},
+                                            onClose:function(){}})));
+                                }()),
         // ─── TAB: PIPELINE ────────────────────────────────────────────────────
         tab==="pipeline" && React.createElement("div", {style:{overflowX:"auto", paddingBottom:20}},
             React.createElement("div", {style:{display:"flex", gap:12, minWidth:"max-content", alignItems:"flex-start", padding:"4px 0"}},
@@ -3461,18 +3416,10 @@ function Skoler(_a) {
 function Traditioner(_a) {
     var user = _a.user, schools = _a.schools, setSchools = _a.setSchools, assignments = _a.assignments, activity = _a.activity||[], setActivity = _a.setActivity||null, events = _a.events||[], setEvents = _a.setEvents||null, staff = _a.staff||[], customFilters = _a.customFilters, setCustomFilters = _a.setCustomFilters, customKonkurrenter = _a.customKonkurrenter, modeskabeloner = _a.modeskabeloner;
     var canEdit = can(user, "edit");
-    var stf = useState(null);
-    var tradFilter = stf[0];
-    var setTradFilter = stf[1];
-    var sel = useState(null);
-    var selSchool = sel[0];
-    var setSelSchool = sel[1];
-    var selCo = useState(null);
-    var selCohort = selCo[0];
-    var setSelCohort = selCo[1];
-    var stoast = useState(null);
-    var toast = stoast[0];
-    var setToast = stoast[1];
+    var stf=useState(null); var tradFilter=stf[0]; var setTradFilter=stf[1];
+    var sel=useState(null); var selSchool=sel[0]; var setSelSchool=sel[1];
+    var selCo=useState(null); var selCohort=selCo[0]; var setSelCohort=selCo[1];
+    var stoast=useState(null); var toast=stoast[0]; var setToast=stoast[1];
     function showToast(m) { setToast(m); setTimeout(function () { setToast(null); }, 2000); }
     var tradSchools = tradFilter ? (tradFilter.type === "staff" ? schools.filter(function (s) { return (assignments[s.id] || []).includes(tradFilter.id); }) : schools.filter(function (s) { var f = (customFilters || []).find(function (ff) { return ff.id === tradFilter.id; }); return f ? (f.schoolIds || []).includes(s.id) : true; })) : schools;
     function saveCohortTrad(schoolId, cohortId, upd) {
@@ -3519,20 +3466,14 @@ function Traditioner(_a) {
                     React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "\uD83D\uDCC5"),
                     React.createElement("div", { style: { fontWeight: 600, color: TXT, marginBottom: 4 } }, school.name),
                     React.createElement("div", null, "V\u00E6lg en \u00E5rgang for at se og redigere traditioner, kontrakt og konkurrenter")),
-                selSchool && selCohort && school && cohort && (React.createElement(CohortDetailModal, { school: school, cohort: cohort, canEdit: canEdit, activity: activity, setActivity: setActivity, setEvents: setEvents, staff: staff, user: user, schools: schools, customKonkurrenter: customKonkurrenter || [], modeskabeloner: modeskabeloner || [], onSave: function (upd) { saveCohortTrad(school.id, cohort.id, upd); }, onClose: function () { }, inline: true }))))));
+                selSchool && selCohort && school && cohort && (React.createElement(CohortDetailModal, { school: school, cohort: cohort, canEdit: canEdit, activity: activity, setActivity: setActivity, setEvents: setEvents, staff: staff, user: user, schools: schools, customKonkurrenter: customKonkurrenter || [], konkurrentProfiler: konkurrentProfiler || [], modeskabeloner: modeskabeloner || [], onSave: function (upd) { saveCohortTrad(school.id, cohort.id, upd); }, onClose: function () { }, inline: true }))))));
 }
-//  SAG CARD (extracted to allow hooks per sag) 
+//  SAG CARD (extracted to allow hooks per sag)
 function SagCard(_a) {
     var sag = _a.sag, schools = _a.schools, isInternal = _a.isInternal, onUpdateStatus = _a.onUpdateStatus, onUpdateAssign = _a.onUpdateAssign, onUpdateNote = _a.onUpdateNote, onAddReply = _a.onAddReply;
-    var so = useState(false);
-    var openSag = so[0];
-    var setOpenSag = so[1];
-    var sr = useState("");
-    var replyT = sr[0];
-    var setReplyT = sr[1];
-    var sn = useState(sag.internalNote || "");
-    var inNote = sn[0];
-    var setInNote = sn[1];
+    var so=useState(false); var openSag=so[0]; var setOpenSag=so[1];
+    var sr=useState(""); var replyT=sr[0]; var setReplyT=sr[1];
+    var sn=useState(sag.internalNote || ""); var inNote=sn[0]; var setInNote=sn[1];
     var sc = SAG_COLORS[sag.status];
     var school = schools.find(function (s) { return s.id === sag.schoolId; });
     return (React.createElement(Card, { noPad: true, style: { marginBottom: 10 } },
@@ -3577,7 +3518,7 @@ function SagCard(_a) {
                         setReplyT("");
                     } }, style: { padding: "7px 14px", borderRadius: 5, border: "none", background: NAVY, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "Send")))));
 }
-//  KOMMUNIKATION 
+//  KOMMUNIKATION
 // ─── ANALYTICS (admin) ───
 // ─── RAPPORTER (Analytics + Statistik samlet) ─────────────────────────────────
 function Rapporter(_a) {
@@ -3588,9 +3529,7 @@ function Rapporter(_a) {
     var today = new Date().toISOString().split("T")[0];
     // Default tab: saelger gets "salg" first, admin gets "overblik"
     var defaultTab = isAdmin ? "overblik" : "salg";
-    var stab = useState(defaultTab);
-    var tab = stab[0];
-    var setTab = stab[1];
+    var stab=useState(defaultTab); var tab=stab[0]; var setTab=stab[1];
     var TABS = [];
     if (isAdmin)
         TABS.push({ key: "overblik", label: "Overblik" });
@@ -3620,19 +3559,10 @@ function Rapporter(_a) {
     var myCls = allCls.filter(function (c) { return mySchoolIds.includes(c.schoolId); });
     var totalRev = myCls.reduce(function (a, c) { return a + (c.rev || 0); }, 0);
     var totalOrd = myCls.reduce(function (a, c) { return a + (c.orders || 0); }, 0);
-    // ── Statistik tab state ───────────────────────────────────────────────────
-    var sse = useState(null);
-    var editCell = sse[0];
-    var setEditCell = sse[1];
-    var sev = useState("");
-    var editVal = sev[0];
-    var setEditVal = sev[1];
-    var ssf = useState(null);
-    var selSchool = ssf[0];
-    var setSelSchool = ssf[1];
-    var stoast = useState(null);
-    var toast = stoast[0];
-    var setToast = stoast[1];
+    var sse=useState(null); var editCell=sse[0]; var setEditCell=sse[1];
+    var sev=useState(""); var editVal=sev[0]; var setEditVal=sev[1];
+    var ssf=useState(null); var selSchool=ssf[0]; var setSelSchool=ssf[1];
+    var stoast=useState(null); var toast=stoast[0]; var setToast=stoast[1];
     function showToast(m) { setToast(m); setTimeout(function () { setToast(null); }, 2000); }
     function startEdit(schoolId, cohortId, classId, field, cur) {
         if (!canEdit)
@@ -3666,7 +3596,6 @@ function Rapporter(_a) {
     }
     var filtCls = selSchool ? myCls.filter(function (c) { return c.schoolId === selSchool; }) : myCls;
     var maxRev = Math.max.apply(null, filtCls.map(function (c) { return c.rev || 0; }).concat([1]));
-    // ── Analytics data ─────────────────────────────────────────────────────────
     var saelgere = (staff || []).filter(function (s) { return s.role === "saelger"; });
     var staffStats = saelgere.map(function (s) {
         var myS = schools.filter(function (sc) { return (assignments[sc.id] || []).includes(s.id); });
@@ -3925,12 +3854,8 @@ function Guides(_a) {
     var sg = useLS('guides', [{ id: 1, icon: "🎓", title: "Bestilling af studenterhue", body: "Log ind og gaa til Min skole. Under Produktion kan du se status paa din hues fremstilling. Har du spoergsmaal, kontakt din CLS-saelger via Chat." }, { id: 2, icon: "💳", title: "Saadan betaler du", body: "Gaa til Betalingsstatus under Min skole og tryk paa Betal nu. Har du problemer med betalingen, kontakt os via Kommunikation." }, { id: 3, icon: "👗", title: "Studieturtoej", body: "Din klasse bestiller via den link saelger har opsat. Tegning og print vaelges, og levering sker typisk 3-4 uger efter deadline." }, { id: 4, icon: "📗", title: "Blaabogen", body: "Alle elever bidrager via Blaabog-portalen. Deadline er som aftalt med skolen. Korrektur sendes til repr. inden tryk." }, { id: 5, icon: "❓", title: "Kontakt os", body: "Brug Chat-funktionen for hurtige spoergsmaal, eller opret en Henvendelse under Kommunikation for formelle sager." }]);
     var guides = sg[0];
     var setGuides = sg[1];
-    var sei = useState(null);
-    var editId = sei[0];
-    var setEditId = sei[1];
-    var sev = useState({ icon: "", title: "", body: "" });
-    var editVal = sev[0];
-    var setEditVal = sev[1];
+    var sei=useState(null); var editId=sei[0]; var setEditId=sei[1];
+    var sev=useState({ icon: "", title: "", body: "" }); var editVal=sev[0]; var setEditVal=sev[1];
     var snid = useRef(Date.now());
     function startEdit(g) { setEditId(g.id); setEditVal({ icon: g.icon, title: g.title, body: g.body }); }
     function saveEdit() { setGuides(function (p) { return p.map(function (g) { return g.id === editId ? Object.assign({}, g, editVal) : g; }); }); setEditId(null); }
@@ -3965,15 +3890,9 @@ function Guides(_a) {
 // ── MEDARBEJDERE TAB ─────────────────────────────────────────────────────
 function MedarbejdereTab(_a) {
     var staff = _a.staff, setStaff = _a.setStaff, schools = _a.schools, assignments = _a.assignments, setAssignments = _a.setAssignments;
-    var se = useState(null);
-    var editing = se[0];
-    var setEditing = se[1];
-    var sv = useState({ name: "", role: "saelger", email: "", phone: "" });
-    var editVal = sv[0];
-    var setEditVal = sv[1];
-    var snew = useState(false);
-    var isNew = snew[0];
-    var setIsNew = snew[1];
+    var se=useState(null); var editing=se[0]; var setEditing=se[1];
+    var sv=useState({ name: "", role: "saelger", email: "", phone: "" }); var editVal=sv[0]; var setEditVal=sv[1];
+    var snew=useState(false); var isNew=snew[0]; var setIsNew=snew[1];
     var iS = { width: "100%", padding: "8px 10px", borderRadius: 5, border: "1px solid " + BRD, fontSize: 13, fontFamily: "'DM Sans',sans-serif", color: TXT, boxSizing: "border-box" };
     var STAFF_ROLES = ["admin", "saelger", "internsalg"];
     function openNew() { setEditVal({ name: "", role: "saelger", email: "", phone: "" }); setIsNew(true); setEditing("new"); }
@@ -4048,12 +3967,8 @@ function MedarbejdereTab(_a) {
 // ── EKSPORT TAB ──────────────────────────────────────────────────────────
 function EksportTab(_a) {
     var schools = _a.schools, staff = _a.staff, assignments = _a.assignments, sager = _a.sager, pipeline = _a.pipeline;
-    var ss = useState("");
-    var selStaff = ss[0];
-    var setSelStaff = ss[1];
-    var sf = useState("csv");
-    var fmt = sf[0];
-    var setFmt = sf[1];
+    var ss=useState(""); var selStaff=ss[0]; var setSelStaff=ss[1];
+    var sf=useState("csv"); var fmt=sf[0]; var setFmt=sf[1];
     var saelgere = (staff || []).filter(function (s) { return s.role === "saelger" || s.role === "internsalg" || s.role === "admin"; });
     function getMySchools() { if (!selStaff)
         return schools; return schools.filter(function (sc) { return (assignments[sc.id] || []).includes(Number(selStaff)); }); }
@@ -4227,27 +4142,13 @@ function Indstillinger(_a) {
     var tab = st[0]; var setTab = st[1];
     var faqItems = _a.faqItems||[]; var setFaqItems = _a.setFaqItems||function(){};
     var dokItems = _a.dokItems||[]; var setDokItems = _a.setDokItems||function(){};
-    var ss = useState(null);
-    var skabelonEdit = ss[0];
-    var setSkabelonEdit = ss[1];
-    var sn = useState(false);
-    var nySkabelon = sn[0];
-    var setNySkabelon = sn[1];
-    var stoast = useState(null);
-    var toast = stoast[0];
-    var setToast = stoast[1];
-    var snk = useState("");
-    var nyKonkNavn = snk[0];
-    var setNyKonkNavn = snk[1];
-    var sok = useState(null);
-    var openKonk = sok[0];
-    var setOpenKonk = sok[1];
-    var som = useState(null);
-    var openMode = som[0];
-    var setOpenMode = som[1];
-    var snmt = useState("");
-    var nyModetypeNavn = snmt[0];
-    var setNyModetypeNavn = snmt[1];
+    var ss=useState(null); var skabelonEdit=ss[0]; var setSkabelonEdit=ss[1];
+    var sn=useState(false); var nySkabelon=sn[0]; var setNySkabelon=sn[1];
+    var stoast=useState(null); var toast=stoast[0]; var setToast=stoast[1];
+    var snk=useState(""); var nyKonkNavn=snk[0]; var setNyKonkNavn=snk[1];
+    var sok=useState(null); var openKonk=sok[0]; var setOpenKonk=sok[1];
+    var som=useState(null); var openMode=som[0]; var setOpenMode=som[1];
+    var snmt=useState(""); var nyModetypeNavn=snmt[0]; var setNyModetypeNavn=snmt[1];
     function showToast(m) { setToast(m); setTimeout(function () { setToast(null); }, 2200); }
     function toggleAssign(schoolId, staffId) { setAssignments(function (p) { var cur = p[schoolId] || []; var next = cur.includes(staffId) ? cur.filter(function (id) { return id !== staffId; }) : [].concat(cur, [staffId]); return Object.assign({}, p, (function () { var _o = {}; _o[schoolId] = next; return _o; })()); }); }
     function saveSkabelon(data) {
@@ -4604,7 +4505,6 @@ function RolleAdminTab(_a) {
     return React.createElement("div", null,
         toast && React.createElement(Toast, { msg:toast }),
 
-        // ── Role list ──────────────────────────────────────────────────────────
         !editing && React.createElement("div", null,
             React.createElement("div", { style:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 } },
                 React.createElement("div", null,
@@ -4637,7 +4537,6 @@ function RolleAdminTab(_a) {
                             role.pages.length > 5 && React.createElement("span", { style:{ fontSize:10, color:MTD } }, "+"+(role.pages.length-5)+" mere")));
                 }))),
 
-        // ── Role editor ────────────────────────────────────────────────────────
         editing && React.createElement("div", null,
             React.createElement("div", { style:{ display:"flex", alignItems:"center", gap:10, marginBottom:20 } },
                 React.createElement("button", { onClick:function(){setEditing(null);}, style:{ padding:"6px 12px", borderRadius:5, border:"1px solid "+BRD, background:"transparent", color:MTD, fontSize:12, cursor:"pointer", fontFamily:"inherit" } }, "← Tilbage"),
@@ -4704,7 +4603,7 @@ function RolleAdminTab(_a) {
                 React.createElement("button", { onClick:saveRole, disabled:!editing.key.trim()||!editing.label.trim(), style:{ padding:"9px 20px", borderRadius:6, border:"none", background:(editing.key&&editing.label)?NAVY:BRD, color:"#fff", fontSize:13, fontWeight:600, cursor:(editing.key&&editing.label)?"pointer":"default", fontFamily:"inherit" } }, "Gem rolle"))));
 }
 
-//  LOGIN 
+//  LOGIN
 function Login(_a) {
     var onLogin=_a.onLogin;
     return React.createElement("div",{style:{minHeight:"100vh",background:"linear-gradient(160deg,#0d1927 0%,"+NAVY+" 60%,#1a2f4a 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"'DM Sans',sans-serif"}},
@@ -5084,7 +4983,7 @@ function QuickStatBar(_a){
 
 function Kalender(_a) {
     var setEvents=_a.setEvents||function(){}, setActivity=_a.setActivity||function(){};
-    var user = _a.user, schools = _a.schools, events = _a.events, activity = _a.activity, assignments = _a.assignments, staff = _a.staff, onOpenPipeline = _a.onOpenPipeline;
+    var user = _a.user, schools = _a.schools, events = _a.events, activity = _a.activity, assignments = _a.assignments, staff = _a.staff, onOpenPipeline = _a.onOpenPipeline||function(){};
     var MONTHS = ["Januar","Februar","Marts","April","Maj","Juni","Juli","August","September","Oktober","November","December"];
     var DAYS = ["Man","Tir","Ons","Tor","Fre","Lør","Søn"];
     var now = new Date();
@@ -5313,14 +5212,93 @@ function Kalender(_a) {
                             item.overdue && React.createElement("div", { style:{ fontSize:11, fontWeight:700, color:"#A0392A", marginTop:6, background:"#FAE8E6", padding:"3px 8px", borderRadius:4 } }, "⚠️ Overskredet"));
                     })))));
 }
-//  APP 
+//  APP
+
+// ─── EXPORT ──────────────────────────────────────────────────────
+function exportToCsv(schools, activity) {
+    var rows = [["Skole","By","Status","Sidst kontaktet","Årgang","Klasse","Elever","Repr 1","Repr 2","Produkter"]];
+    var today = todayStr();
+    (schools||[]).forEach(function(s) {
+        var lastAct = (activity||[]).filter(function(a){return a.schoolId===s.id;})
+            .sort(function(a,b){return (b.createdAt||"")>(a.createdAt||"")?1:-1;})[0];
+        var daysSince = lastAct&&lastAct.createdAt ? Math.floor((new Date(today)-new Date(lastAct.createdAt.slice(0,10)))/864e5) : "";
+        var activeCoh = s.cohorts.filter(function(c){return c.status==="active";});
+        if (activeCoh.length === 0) {
+            rows.push([s.name, s.city||"", s.procesStatus||"", daysSince, "", "", "", "", "", ""]);
+        } else {
+            activeCoh.forEach(function(co) {
+                if (!co.classes || co.classes.length === 0) {
+                    rows.push([s.name, s.city||"", s.procesStatus||"", daysSince, co.year, "", "", "", "", ""]);
+                } else {
+                    co.classes.forEach(function(cl) {
+                        rows.push([
+                            s.name, s.city||"", s.procesStatus||"", daysSince, co.year, cl.name,
+                            cl.students||0,
+                            cl.repr1 ? cl.repr1.name : "",
+                            cl.repr2 ? cl.repr2.name : "",
+                            (cl.products||[]).join(", ")
+                        ]);
+                    });
+                }
+            });
+        }
+    });
+    var csv = rows.map(function(r){ return r.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(","); }).join("\n");
+    var blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a"); a.href=url; a.download="cls_skoler_"+todayStr()+".csv";
+    a.click(); URL.revokeObjectURL(url);
+}
+
+
+// ─── APP ROOT ──────────────────────────────────────────────────
+// ─── ERROR BOUNDARY ──────────────────────────────────────────────────────────
+var ErrorBoundary = (function() {
+    function ErrorBoundary(props) {
+        React.Component.call(this, props);
+        this.state = { hasError: false, error: null };
+    }
+    ErrorBoundary.prototype = Object.create(React.Component.prototype);
+    ErrorBoundary.prototype.constructor = ErrorBoundary;
+    ErrorBoundary.getDerivedStateFromError = function(error) {
+        return { hasError: true, error: error };
+    };
+    ErrorBoundary.prototype.componentDidCatch = function(error, info) {
+        try { console.error("CLS+ Error:", error, info); } catch(e) {}
+    };
+    ErrorBoundary.prototype.render = function() {
+        if (this.state.hasError) {
+            return React.createElement("div", { style: {
+                display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+                minHeight:"100vh", background:"#F8F6F2", padding:40, textAlign:"center"
+            }},
+                React.createElement("div", { style: { fontSize:48, marginBottom:16 } }, "⚠️"),
+                React.createElement("div", { style: { fontSize:20, fontWeight:700, color:"#152035", marginBottom:8, fontFamily:"'Playfair Display',serif" } }, "Noget gik galt"),
+                React.createElement("div", { style: { fontSize:14, color:"#7A7469", marginBottom:24, maxWidth:400 } },
+                    "En uventet fejl opstod. Dine data er gemt. Genindlæs siden for at fortsætte."),
+                React.createElement("div", { style: { fontSize:12, color:"#C0BDB7", marginBottom:24, fontFamily:"monospace", background:"#fff", padding:"8px 16px", borderRadius:6, border:"1px solid #E8E4DE", maxWidth:500, wordBreak:"break-all" } },
+                    this.state.error ? String(this.state.error.message) : "Ukendt fejl"),
+                React.createElement("button", {
+                    onClick: function() { window.location.reload(); },
+                    style: { padding:"10px 24px", borderRadius:6, border:"none", background:"#152035", color:"#fff", fontSize:14, cursor:"pointer", fontWeight:600 }
+                }, "🔄 Genindlæs siden"));
+        }
+        return this.props.children;
+    };
+    return ErrorBoundary;
+}());
+
+
 function App() {
-    var su = useState(null);
-    var user = su[0];
-    var setUser = su[1];
-    var sp = useState("dashboard");
-    var page = sp[0];
-    var setPage = sp[1];
+    useEffect(function(){
+        var vp=document.querySelector("meta[name=viewport]");
+        if(!vp){var m=document.createElement("meta");m.name="viewport";
+        m.content="width=device-width,initial-scale=1.0";
+        document.head.appendChild(m);}
+    },[]);
+
+    var su=useState(null); var user=su[0]; var setUser=su[1];
+    var sp=useState("dashboard"); var page=sp[0]; var setPage=sp[1];
     var ss = useLS('schools', INIT_SCHOOLS);
     var schools = ss[0];
     var setSchools = ss[1];
@@ -5355,10 +5333,16 @@ function App() {
     var sager = activity.filter(function (a) { return a.type === "contact"; });
     var setSager = function () { };
     var opgaver = activity.filter(function (a) { return a.type === "task"; });
-    var setOpgaver = function () { };
-    var sgsr = useState(false);
-    var showSearch = sgsr[0];
-    var setShowSearch = sgsr[1];
+    var setOpgaver = function(tasksOrFn) {
+        setActivity(function(prev) {
+            var nonTasks = prev.filter(function(a){ return a.type !== "task"; });
+            var newTasks = typeof tasksOrFn === "function"
+                ? tasksOrFn(prev.filter(function(a){ return a.type === "task"; }))
+                : tasksOrFn;
+            return nonTasks.concat(newTasks);
+        });
+    };
+    var sgsr=useState(false); var showSearch=sgsr[0]; var setShowSearch=sgsr[1];
     var snotif = useState(false);
     var showNotif = snotif[0]; var setShowNotif = snotif[1];
     var spdf = useState(false);
@@ -5367,12 +5351,8 @@ function App() {
     var toasts = stst[0]; var setToasts = stst[1];
 
     function addToast(t){ var id=Date.now(); setToasts(function(p){return p.concat([Object.assign({id:id},t)]);}); setTimeout(function(){setToasts(function(p){return p.filter(function(x){return x.id!==id;});});},3500); }
-    var scn = useState({});
-    var classNotes = scn[0];
-    var setClassNotes = scn[1];
-    var scdm = useState(null);
-    var cohortDetailModal = scdm[0];
-    var setCohortDetailModal = scdm[1];
+    var scn=useLS("classNotes",{}); var classNotes=scn[0]; var setClassNotes=scn[1];
+    var scdm=useState(null); var cohortDetailModal=scdm[0]; var setCohortDetailModal=scdm[1];
     var scf = useLS("customFilters", [{ id: 1, label: "Mine skoler", schoolIds: [1, 2] }, { id: 2, label: "Region Nord", schoolIds: [3] }]);
     var customFilters = scf[0];
     var setCustomFilters = scf[1];
@@ -5382,15 +5362,9 @@ function App() {
     var skp = useLS("konkurrentProfiler", INIT_KONKURRENTER);
     var konkurrentProfiler = skp[0];
     var setKonkurrentProfiler = skp[1];
-    var sms = useState(["Studenterhue-møde", "Blåbog-møde", "Studieturstøj-møde", "Opfølgning", "Aftalemøde"]);
-    var modeskabeloner = sms[0];
-    var setModeskabeloner = sms[1];
-    var smtp = useState([{ id: "Studenterhue-møde", navn: "Studenterhue-møde", formal: "", forberedelse: "", typiskVarighed: "60", hvemDeltager: "Sælger + klasserepræsentanter", tjekliste: "", noter: "" }, { id: "Blåbog-møde", navn: "Blåbog-møde", formal: "", forberedelse: "", typiskVarighed: "45", hvemDeltager: "", tjekliste: "", noter: "" }, { id: "Studieturstøj-møde", navn: "Studieturstøj-møde", formal: "", forberedelse: "", typiskVarighed: "45", hvemDeltager: "", tjekliste: "", noter: "" }, { id: "Opfølgning", navn: "Opfølgning", formal: "", forberedelse: "", typiskVarighed: "30", hvemDeltager: "", tjekliste: "", noter: "" }, { id: "Aftalemøde", navn: "Aftalemøde", formal: "", forberedelse: "", typiskVarighed: "60", hvemDeltager: "", tjekliste: "", noter: "" }]);
-    var modeProfiler = smtp[0];
-    var setModeProfiler = smtp[1];
-    var spa = useState(false);
-    var showArkiv = spa[0];
-    var setShowArkiv = spa[1];
+    var sms=useLS("modeskabeloner",["Studenterhue-møde", "Blåbog-møde", "Studieturstøj-møde", "Opfølgning", "Aftalemøde"]); var modeskabeloner=sms[0]; var setModeskabeloner=sms[1];
+    var smtp=useState([{ id: "Studenterhue-møde", navn: "Studenterhue-møde", formal: "", forberedelse: "", typiskVarighed: "60", hvemDeltager: "Sælger + klasserepræsentanter", tjekliste: "", noter: "" }, { id: "Blåbog-møde", navn: "Blåbog-møde", formal: "", forberedelse: "", typiskVarighed: "45", hvemDeltager: "", tjekliste: "", noter: "" }, { id: "Studieturstøj-møde", navn: "Studieturstøj-møde", formal: "", forberedelse: "", typiskVarighed: "45", hvemDeltager: "", tjekliste: "", noter: "" }, { id: "Opfølgning", navn: "Opfølgning", formal: "", forberedelse: "", typiskVarighed: "30", hvemDeltager: "", tjekliste: "", noter: "" }, { id: "Aftalemøde", navn: "Aftalemøde", formal: "", forberedelse: "", typiskVarighed: "60", hvemDeltager: "", tjekliste: "", noter: "" }]); var modeProfiler=smtp[0]; var setModeProfiler=smtp[1];
+    var spa=useState(false); var showArkiv=spa[0]; var setShowArkiv=spa[1];
     var sfaqI = useLS("faqItems", [{id:1,q:"Hvorn\u00e5r skal vi betale?",a:"Betaling skal v\u00e6re p\u00e5 plads inden opm\u00e5lingsdatoen. Tjek fristen under Datoer.",editRoles:["admin"]},{id:2,q:"Hvad sker der ved opm\u00e5lingen?",a:"Et opm\u00e5ler-team m\u00e5ler alle elevers hoved s\u00e5 huen passer perfekt.",editRoles:["admin"]},{id:3,q:"Hvad hvis en elev melder fra?",a:"Kontakt din s\u00e6lger hurtigst muligt.",editRoles:["admin"]},{id:4,q:"Hvorn\u00e5r f\u00e5r vi produkterne?",a:"Leveringstidspunkt ses under Datoer-fanen.",editRoles:["admin"]},{id:5,q:"Hvem kontakter vi?",a:"Din s\u00e6lger \u2014 se Kontakt-fanen.",editRoles:["admin"]},{id:6,q:"Kan vi \u00e6ndre leveringsadresse?",a:"Ja, men kun inden produktion starter. Kontakt din s\u00e6lger.",editRoles:["admin"]}]); var faqItems = sfaqI[0]; var setFaqItems = sfaqI[1];
     var sdokI = useLS("dokItems", [{id:1,label:"Kontrakt",icon:"\uD83D\uDCCB",url:"",editRoles:["admin"]},{id:2,label:"Opm\u00e5lingsskema",icon:"\uD83D\uDCD0",url:"",editRoles:["admin"]},{id:3,label:"Designgodkendelse",icon:"\uD83C\uDFA8",url:"",editRoles:["admin"]},{id:4,label:"Produktspecifikation",icon:"\uD83D\uDCCE",url:"",editRoles:["admin"]}]); var dokItems = sdokI[0]; var setDokItems = sdokI[1];
     var sstf = useLS("staff", ALL_STAFF);
@@ -5425,7 +5399,8 @@ return !p.internal && p.authorId !== user.id && (can(user,"settings") || (school
         React.createElement("link", { href: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap", rel: "stylesheet" }),
         showSearch && React.createElement(GlobalSearch, { schools: schools, pipeline: pipeline, activity: activity, posts: posts, onNavigate: go, onClose: function () { setShowSearch(false); } }),
         React.createElement(Sidebar, { user: user, page: page, go: go, logout: function () { setUser(null); clearLS(); }, notifCount: notifCount, sagCount: sagCount, opgaveCount: opgCount, overdueTasks: overdueCount }),
-        React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 } },
+        React.createElement("div", { id: "cls-save-flash", style: { position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%) translateY(8px)", background:"#152035", color:"#fff", padding:"6px 16px", borderRadius:20, fontSize:12, fontWeight:600, zIndex:9999, opacity:0, transition:"opacity .2s, transform .2s", pointerEvents:"none", whiteSpace:"nowrap" } }, "✓ Gemt"),
+                React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 } },
             React.createElement(Topbar, { page: page, user: user, onSearch: function () { setShowSearch(true); }, overdueTasks: overdueCount, go: go, onNotif: function(){setShowNotif(true);}, notifCount: overdueCount, onPdf: user.role !== "repr" ? function(){setShowPdf(true);} : null }),
             React.createElement("div", { style: mainStyle },
                 page === "dashboard" && React.createElement(Dashboard, { user: user, schools: schools, events: events, activity: activity, assignments: assignments, staff: staff, pipeline: pipeline, onGoPage: go, addToast: addToast, overdueTasks: overdueCount, salesGoal: salesGoal }),
@@ -5457,7 +5432,7 @@ page === "rapporter" && user.role !== "repr" && React.createElement(Rapporter, {
                 page === "guides" && React.createElement(Guides, { user: user })))));
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(ErrorBoundary, null, React.createElement(App)));
 
 </script>
 </body>
